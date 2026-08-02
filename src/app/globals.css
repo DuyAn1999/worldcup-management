@@ -6,6 +6,8 @@
   --color-secondary: var(--secondary);
   --color-line: var(--line);
   --color-highlight: var(--highlight);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
   --font-sans: var(--font-app);
 }
 
@@ -15,6 +17,8 @@
   --secondary: oklch(0.74 0.018 246);
   --line: oklch(0.31 0.026 249);
   --highlight: oklch(0.82 0.17 119);
+  --surface: oklch(0.195 0.027 250);
+  --surface-raised: oklch(0.225 0.03 249);
   --font-app:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -34,6 +38,126 @@ body {
   background: var(--stadium);
   color: var(--foreground);
   font-family: var(--font-app);
+}
+
+::selection {
+  background: color-mix(in oklch, var(--highlight) 35%, transparent);
+  color: var(--foreground);
+}
+
+.stadium-glow {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 48rem;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 78% 12%,
+      color-mix(in oklch, var(--highlight) 13%, transparent),
+      transparent 28rem
+    ),
+    linear-gradient(
+      120deg,
+      transparent 0 56%,
+      color-mix(in oklch, var(--line) 45%, transparent) 56% 56.15%,
+      transparent 56.15%
+    );
+  mask-image: linear-gradient(to bottom, black 45%, transparent 100%);
+}
+
+.journey-track {
+  position: relative;
+}
+
+.journey-track::before {
+  position: absolute;
+  top: 1.2rem;
+  right: 4%;
+  left: 4%;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--line) 6% 94%,
+    transparent
+  );
+}
+
+.journey-marker {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  transition:
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+button:hover .journey-marker {
+  border-color: color-mix(in oklch, var(--highlight) 55%, var(--line));
+  color: var(--foreground);
+  transform: translateY(-2px);
+}
+
+.journey-marker-active {
+  border-color: var(--highlight);
+  background: var(--highlight);
+  color: var(--stadium);
+  box-shadow: 0 0 0 5px color-mix(in oklch, var(--highlight) 12%, transparent);
+}
+
+.match-card {
+  position: relative;
+  box-shadow: 0 20px 45px color-mix(in oklch, black 18%, transparent);
+  transition:
+    border-color 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.match-card::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 2px;
+  content: "";
+  background: linear-gradient(to bottom, var(--highlight), transparent 75%);
+  opacity: 0.45;
+}
+
+.match-card:hover {
+  border-color: color-mix(in oklch, var(--highlight) 35%, var(--line));
+  box-shadow: 0 24px 55px color-mix(in oklch, black 25%, transparent);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1023px) {
+  .journey-track::before {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .journey-marker,
+  .match-card {
+    transition: none;
+  }
+
+  button:hover .journey-marker,
+  .match-card:hover {
+    transform: none;
+  }
 }
 
 button,

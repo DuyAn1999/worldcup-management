@@ -4,19 +4,23 @@ import { describe, expect, it } from "vitest";
 import HomePage from "./page";
 
 describe("HomePage", () => {
-  it("renders the project foundation and tournament stages", () => {
+  it("renders the completed tournament overview and match explorer", () => {
     render(<HomePage />);
 
     expect(
       screen.getByRole("heading", {
-        name: "Every team has a road to the final.",
+        name: "The complete road, match by match.",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Foundation ready")).toBeInTheDocument();
+    expect(screen.getByText("Tournament complete")).toBeInTheDocument();
     expect(
-      screen.getByRole("list", { name: "Tournament stages" }),
+      screen.getByRole("heading", { name: "Match explorer" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Round of 32")).toBeInTheDocument();
-    expect(screen.getByText("Final")).toBeInTheDocument();
+    expect(screen.getByText("104 matches shown")).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Match results" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Match 1")).toBeInTheDocument();
+    expect(screen.getByText("Match 104")).toBeInTheDocument();
   });
 });
