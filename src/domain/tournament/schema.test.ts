@@ -34,6 +34,23 @@ function createValidSnapshot(): TournamentSnapshot {
         countryCode: "ZA",
       },
     ],
+    players: [
+      {
+        id: "mexico-scorer",
+        teamId: "mexico",
+        name: "Mexico Scorer",
+      },
+      {
+        id: "mexico-assistant",
+        teamId: "mexico",
+        name: "Mexico Assistant",
+      },
+      {
+        id: "south-africa-defender",
+        teamId: "south-africa",
+        name: "South Africa Defender",
+      },
+    ],
     groups: [
       {
         id: "group-a",
@@ -78,6 +95,40 @@ function createValidSnapshot(): TournamentSnapshot {
         away: { type: "match_winner", matchId: "match-1" },
         kickoffAt: "2026-06-28T15:00:00-07:00",
         status: "scheduled",
+      },
+    ],
+    matchEvents: [
+      {
+        id: "match-1-goal-1",
+        matchId: "match-1",
+        sequence: 1,
+        minute: 18,
+        teamId: "mexico",
+        playerId: "mexico-scorer",
+        type: "goal",
+        goalType: "open_play",
+        assistPlayerId: "mexico-assistant",
+      },
+      {
+        id: "match-1-card-1",
+        matchId: "match-1",
+        sequence: 2,
+        minute: 45,
+        stoppageMinute: 2,
+        teamId: "south-africa",
+        playerId: "south-africa-defender",
+        type: "card",
+        cardType: "yellow",
+      },
+      {
+        id: "match-1-goal-2",
+        matchId: "match-1",
+        sequence: 3,
+        minute: 71,
+        teamId: "mexico",
+        playerId: "south-africa-defender",
+        type: "goal",
+        goalType: "own_goal",
       },
     ],
     provenance: {
@@ -205,5 +256,186 @@ describe("parseTournamentSnapshot", () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it("rejects unknown match, team, and player references in events", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      matchEvents: [
+        {
+          ...snapshot.matchEvents[0],
+          matchId: "unknown-match",
+          teamId: "unknown-team",
+          playerId: "unknown-player",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Unknown match reference: unknown-match"),
+        ),
+      ).toBe(true);
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Unknown player reference: unknown-player"),
+        ),
+      ).toBe(true);
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Unknown team reference: unknown-team"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects an event team that does not participate in its match", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      teams: [
+        ...snapshot.teams,
+        {
+          id: "canada",
+          name: "Canada",
+          shortName: "Canada",
+          code: "CAN",
+          countryCode: "CA",
+        },
+      ],
+      players: [
+        ...snapshot.players,
+        { id: "canada-player", teamId: "canada", name: "Canada Player" },
+      ],
+      matchEvents: [
+        {
+          ...snapshot.matchEvents[1],
+          teamId: "canada",
+          playerId: "canada-player",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("does not participate in match"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("validates scorer, assist, card, and own-goal team relationships", () => {
+    const snapshot = createValidSnapshot();
+    const invalidEvents = [
+      {
+        ...snapshot.matchEvents[0],
+        playerId: "south-africa-defender",
+      },
+      {
+        ...snapshot.matchEvents[0],
+        assistPlayerId: "south-africa-defender",
+      },
+      {
+        ...snapshot.matchEvents[1],
+        playerId: "mexico-scorer",
+      },
+      {
+        ...snapshot.matchEvents[2],
+        playerId: "mexico-scorer",
+      },
+    ];
+
+    const results = invalidEvents.map((event) =>
+      safeParseTournamentSnapshot({ ...snapshot, matchEvents: [event] }),
+    );
+
+    expect(results.every((result) => !result.success)).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("does not belong to event team"),
+          ),
+      ),
+    ).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("own-goal scorer must belong"),
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects self-assisted goals", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      matchEvents: [
+        {
+          ...snapshot.matchEvents[0],
+          assistPlayerId: snapshot.matchEvents[0].playerId,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("cannot assist their own goal"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects duplicate event ids and sequences within a match", () => {
+    const snapshot = createValidSnapshot();
+    const duplicateEvent = {
+      ...snapshot.matchEvents[0],
+      minute: 52,
+    };
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      matchEvents: [snapshot.matchEvents[0], duplicateEvent],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Duplicate matchEvents id"),
+        ),
+      ).toBe(true);
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Duplicate event sequence"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects invalid event minutes and stoppage time", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      matchEvents: [
+        {
+          ...snapshot.matchEvents[0],
+          minute: 121,
+          stoppageMinute: 0,
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
   });
 });

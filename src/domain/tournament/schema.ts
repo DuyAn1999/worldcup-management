@@ -1,12 +1,15 @@
 import { z } from "zod";
 
 import {
+  cardTypes,
+  goalTypes,
   matchDecisions,
   matchStages,
   matchStatuses,
   tournamentModes,
   tournamentSourceKinds,
   tournamentStatuses,
+  type Match,
   type TournamentSnapshot,
 } from "./types";
 
@@ -55,6 +58,14 @@ export const teamSchema = z
     shortName: z.string().trim().min(1).max(40),
     code: z.string().trim().min(2).max(10),
     countryCode: countryCodeSchema.optional(),
+  })
+  .strict();
+
+export const playerSchema = z
+  .object({
+    id: entityIdSchema,
+    teamId: entityIdSchema,
+    name: z.string().trim().min(1).max(120),
   })
   .strict();
 
@@ -192,6 +203,34 @@ export const matchSchema = z
     }
   });
 
+const matchEventBaseShape = {
+  id: entityIdSchema,
+  matchId: entityIdSchema,
+  sequence: z.number().int().positive(),
+  minute: z.number().int().nonnegative().max(120),
+  stoppageMinute: z.number().int().positive().optional(),
+  teamId: entityIdSchema,
+  playerId: entityIdSchema,
+};
+
+export const matchEventSchema = z.discriminatedUnion("type", [
+  z
+    .object({
+      ...matchEventBaseShape,
+      type: z.literal("goal"),
+      goalType: z.enum(goalTypes),
+      assistPlayerId: entityIdSchema.optional(),
+    })
+    .strict(),
+  z
+    .object({
+      ...matchEventBaseShape,
+      type: z.literal("card"),
+      cardType: z.enum(cardTypes),
+    })
+    .strict(),
+]);
+
 export const tournamentProvenanceSchema = z
   .object({
     kind: z.enum(tournamentSourceKinds),
@@ -205,9 +244,11 @@ export const tournamentSnapshotSchema = z
   .object({
     tournament: tournamentSchema,
     teams: z.array(teamSchema),
+    players: z.array(playerSchema),
     groups: z.array(groupSchema),
     venues: z.array(venueSchema),
     matches: z.array(matchSchema),
+    matchEvents: z.array(matchEventSchema),
     provenance: tournamentProvenanceSchema,
   })
   .strict()
@@ -216,12 +257,30 @@ export const tournamentSnapshotSchema = z
     validateUniqueIds(snapshot.groups, "groups", context);
     validateUniqueIds(snapshot.venues, "venues", context);
     validateUniqueIds(snapshot.matches, "matches", context);
+    validateUniqueIds(snapshot.players, "players", context);
+    validateUniqueIds(snapshot.matchEvents, "matchEvents", context);
 
     const teamIds = new Set(snapshot.teams.map((team) => team.id));
+    const playersById = new Map(
+      snapshot.players.map((player) => [player.id, player]),
+    );
     const groupsById = new Map(snapshot.groups.map((group) => [group.id, group]));
     const venueIds = new Set(snapshot.venues.map((venue) => venue.id));
-    const matchIds = new Set(snapshot.matches.map((match) => match.id));
+    const matchesById = new Map(
+      snapshot.matches.map((match) => [match.id, match]),
+    );
+    const matchIds = new Set(matchesById.keys());
     const assignedTeams = new Map<string, string>();
+
+    snapshot.players.forEach((player, playerIndex) => {
+      if (!teamIds.has(player.teamId)) {
+        addReferenceIssue(
+          context,
+          ["players", playerIndex, "teamId"],
+          `Unknown team reference: ${player.teamId}`,
+        );
+      }
+    });
 
     snapshot.groups.forEach((group, groupIndex) => {
       const groupTeamIds = new Set<string>();
@@ -305,6 +364,102 @@ export const tournamentSnapshotSchema = z
         );
       }
     });
+
+    const sequencesByMatchId = new Map<string, Set<number>>();
+
+    snapshot.matchEvents.forEach((event, eventIndex) => {
+      const eventPath = ["matchEvents", eventIndex];
+      const match = matchesById.get(event.matchId);
+      const player = playersById.get(event.playerId);
+      const eventTeamIsParticipant =
+        match &&
+        ((match.home.type === "team" &&
+          match.home.teamId === event.teamId) ||
+          (match.away.type === "team" && match.away.teamId === event.teamId));
+
+      if (!match) {
+        addReferenceIssue(
+          context,
+          [...eventPath, "matchId"],
+          `Unknown match reference: ${event.matchId}`,
+        );
+      }
+
+      if (!teamIds.has(event.teamId)) {
+        addReferenceIssue(
+          context,
+          [...eventPath, "teamId"],
+          `Unknown team reference: ${event.teamId}`,
+        );
+      } else if (match && !eventTeamIsParticipant) {
+        addReferenceIssue(
+          context,
+          [...eventPath, "teamId"],
+          `Event team ${event.teamId} does not participate in match ${event.matchId}`,
+        );
+      }
+
+      if (!player) {
+        addReferenceIssue(
+          context,
+          [...eventPath, "playerId"],
+          `Unknown player reference: ${event.playerId}`,
+        );
+      } else if (event.type === "goal" && event.goalType === "own_goal") {
+        const opposingTeamId = getOpposingTeamId(match, event.teamId);
+        if (!opposingTeamId || player.teamId !== opposingTeamId) {
+          addReferenceIssue(
+            context,
+            [...eventPath, "playerId"],
+            "An own-goal scorer must belong to the opposing team",
+          );
+        }
+      } else if (player.teamId !== event.teamId) {
+        addReferenceIssue(
+          context,
+          [...eventPath, "playerId"],
+          `Player ${event.playerId} does not belong to event team ${event.teamId}`,
+        );
+      }
+
+      if (event.type === "goal" && event.assistPlayerId) {
+        const assistingPlayer = playersById.get(event.assistPlayerId);
+
+        if (!assistingPlayer) {
+          addReferenceIssue(
+            context,
+            [...eventPath, "assistPlayerId"],
+            `Unknown player reference: ${event.assistPlayerId}`,
+          );
+        } else if (assistingPlayer.teamId !== event.teamId) {
+          addReferenceIssue(
+            context,
+            [...eventPath, "assistPlayerId"],
+            `Assisting player ${event.assistPlayerId} does not belong to event team ${event.teamId}`,
+          );
+        }
+
+        if (event.assistPlayerId === event.playerId) {
+          context.addIssue({
+            code: "custom",
+            message: "A player cannot assist their own goal",
+            path: [...eventPath, "assistPlayerId"],
+          });
+        }
+      }
+
+      const usedSequences =
+        sequencesByMatchId.get(event.matchId) ?? new Set<number>();
+      if (usedSequences.has(event.sequence)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate event sequence ${event.sequence} for match ${event.matchId}`,
+          path: [...eventPath, "sequence"],
+        });
+      }
+      usedSequences.add(event.sequence);
+      sequencesByMatchId.set(event.matchId, usedSequences);
+    });
   });
 
 type ValidationContext = z.RefinementCtx;
@@ -312,7 +467,13 @@ type EntityWithId = Readonly<{ id: string }>;
 
 function validateUniqueIds(
   entities: readonly EntityWithId[],
-  collectionName: "teams" | "groups" | "venues" | "matches",
+  collectionName:
+    | "teams"
+    | "players"
+    | "groups"
+    | "venues"
+    | "matches"
+    | "matchEvents",
   context: ValidationContext,
 ) {
   const seenIds = new Set<string>();
@@ -327,6 +488,20 @@ function validateUniqueIds(
     }
     seenIds.add(entity.id);
   });
+}
+
+function getOpposingTeamId(match: Match | undefined, creditedTeamId: string) {
+  if (
+    !match ||
+    match.home.type !== "team" ||
+    match.away.type !== "team"
+  ) {
+    return undefined;
+  }
+
+  if (match.home.teamId === creditedTeamId) return match.away.teamId;
+  if (match.away.teamId === creditedTeamId) return match.home.teamId;
+  return undefined;
 }
 
 function validateParticipant(

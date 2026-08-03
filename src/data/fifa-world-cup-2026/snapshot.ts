@@ -13,9 +13,11 @@ import { fifaWorldCup2026Venues } from "./venues";
 export const fifaWorldCup2026Snapshot = parseTournamentSnapshot({
   tournament: fifaWorldCup2026Tournament,
   teams: fifaWorldCup2026Teams,
+  players: [],
   groups: fifaWorldCup2026Groups,
   venues: fifaWorldCup2026Venues,
   matches: fifaWorldCup2026Matches,
+  matchEvents: [],
   provenance: fifaWorldCup2026Provenance,
 });
 

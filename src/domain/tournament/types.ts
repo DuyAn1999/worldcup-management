@@ -48,6 +48,8 @@ export type TeamId = string;
 export type GroupId = string;
 export type VenueId = string;
 export type MatchId = string;
+export type PlayerId = string;
+export type MatchEventId = string;
 
 export interface Tournament {
   readonly id: TournamentId;
@@ -66,6 +68,12 @@ export interface Team {
   readonly shortName: string;
   readonly code: string;
   readonly countryCode?: string;
+}
+
+export interface Player {
+  readonly id: PlayerId;
+  readonly teamId: TeamId;
+  readonly name: string;
 }
 
 export interface Group {
@@ -129,6 +137,39 @@ export interface Match {
   readonly score?: MatchScore;
 }
 
+export const goalTypes = ["open_play", "penalty", "own_goal"] as const;
+export type GoalType = (typeof goalTypes)[number];
+
+export const cardTypes = ["yellow", "second_yellow", "red"] as const;
+export type CardType = (typeof cardTypes)[number];
+
+interface MatchEventBase {
+  readonly id: MatchEventId;
+  readonly matchId: MatchId;
+  /** Stable source order within the match. */
+  readonly sequence: number;
+  /** Regulation or extra-time minute before added time. */
+  readonly minute: number;
+  readonly stoppageMinute?: number;
+  /** Team credited with the goal or receiving the card. */
+  readonly teamId: TeamId;
+  readonly playerId: PlayerId;
+}
+
+export interface GoalEvent extends MatchEventBase {
+  readonly type: "goal";
+  /** `penalty` is an in-match penalty; shootout kicks stay in MatchScore. */
+  readonly goalType: GoalType;
+  readonly assistPlayerId?: PlayerId;
+}
+
+export interface CardEvent extends MatchEventBase {
+  readonly type: "card";
+  readonly cardType: CardType;
+}
+
+export type MatchEvent = GoalEvent | CardEvent;
+
 export interface TournamentProvenance {
   readonly kind: TournamentSourceKind;
   readonly provider: string;
@@ -139,8 +180,10 @@ export interface TournamentProvenance {
 export interface TournamentSnapshot {
   readonly tournament: Tournament;
   readonly teams: readonly Team[];
+  readonly players: readonly Player[];
   readonly groups: readonly Group[];
   readonly venues: readonly Venue[];
   readonly matches: readonly Match[];
+  readonly matchEvents: readonly MatchEvent[];
   readonly provenance: TournamentProvenance;
 }
