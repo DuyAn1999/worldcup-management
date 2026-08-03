@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { fifa2026StaticDataSource } from "@/data-sources/fifa-2026-static-data-source";
 import type { Match, MatchStage } from "@/domain/tournament/types";
 
+import { fifaWorldCup2026KnockoutEventSources } from "./event-sources";
 import {
   FIFA_WORLD_CUP_2026_ID,
   fifaWorldCup2026Snapshot,
@@ -14,13 +15,98 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(fifaWorldCup2026Snapshot.groups).toHaveLength(12);
     expect(fifaWorldCup2026Snapshot.venues).toHaveLength(16);
     expect(fifaWorldCup2026Snapshot.matches).toHaveLength(104);
-    expect(fifaWorldCup2026Snapshot.players).toEqual([]);
-    expect(fifaWorldCup2026Snapshot.matchEvents).toEqual([]);
+    expect(fifaWorldCup2026Snapshot.players).toHaveLength(60);
+    expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(93);
     expect(
       fifaWorldCup2026Snapshot.groups.every(
         (group) => group.teamIds.length === 4,
       ),
     ).toBe(true);
+  });
+
+  it("attributes every knockout goal to the verified final score", () => {
+    for (let matchNumber = 73; matchNumber <= 104; matchNumber += 1) {
+      const match = findMatch(matchNumber);
+
+      if (
+        match.home.type !== "team" ||
+        match.away.type !== "team" ||
+        !match.score
+      ) {
+        throw new Error(`Match ${matchNumber} is missing resolved result data`);
+      }
+
+      const matchGoals = fifaWorldCup2026Snapshot.matchEvents.filter(
+        (event) => event.matchId === match.id && event.type === "goal",
+      );
+      const homeTeamId = match.home.teamId;
+      const awayTeamId = match.away.teamId;
+
+      expect(
+        matchGoals.filter((event) => event.teamId === homeTeamId),
+        `Match ${matchNumber} home goals`,
+      ).toHaveLength(match.score.fullTime.home);
+      expect(
+        matchGoals.filter((event) => event.teamId === awayTeamId),
+        `Match ${matchNumber} away goals`,
+      ).toHaveLength(match.score.fullTime.away);
+    }
+  });
+
+  it("keeps an auditable official source for every knockout match", () => {
+    expect(fifaWorldCup2026KnockoutEventSources).toHaveLength(32);
+    expect(
+      fifaWorldCup2026KnockoutEventSources.map((source) => source.matchNumber),
+    ).toEqual(Array.from({ length: 32 }, (_, index) => index + 73));
+
+    for (const source of fifaWorldCup2026KnockoutEventSources) {
+      expect(source.fifaMatchId).toMatch(/^400\d{6}$/);
+      expect(source.sourceUrl).toMatch(
+        /^https:\/\/api\.fifa\.com\/api\/v3\/live\/football\/17\/285023\//,
+      );
+      expect(source.sourceUrl).toContain(source.fifaMatchId);
+    }
+  });
+
+  it("preserves representative knockout goal semantics", () => {
+    expectGoal("match-73-goal-1").toMatchObject({
+      minute: 90,
+      stoppageMinute: 2,
+      teamId: "canada",
+      playerId: "fifa-433635",
+      goalType: "open_play",
+    });
+    expectGoal("match-86-goal-5").toMatchObject({
+      minute: 111,
+      teamId: "argentina",
+      playerId: "fifa-409241",
+      goalType: "own_goal",
+    });
+    expectGoal("match-101-goal-1").toMatchObject({
+      minute: 22,
+      teamId: "spain",
+      playerId: "fifa-430751",
+      goalType: "penalty",
+    });
+    expectGoal("match-104-goal-1").toMatchObject({
+      minute: 106,
+      teamId: "spain",
+      playerId: "fifa-405545",
+      goalType: "open_play",
+    });
+  });
+
+  it("excludes penalty-shootout kicks from match events", () => {
+    expect(
+      fifaWorldCup2026Snapshot.matchEvents.filter(
+        (event) => event.matchId === "match-74",
+      ),
+    ).toHaveLength(2);
+    expect(
+      fifaWorldCup2026Snapshot.matchEvents.filter(
+        (event) => event.matchId === "match-96",
+      ),
+    ).toHaveLength(0);
   });
 
   it("contains every match number exactly once", () => {
@@ -140,10 +226,29 @@ describe("FIFA World Cup 2026 static snapshot", () => {
 });
 
 function expectMatch(matchNumber: number) {
+  const match = findMatch(matchNumber);
+
+  return expect(match);
+}
+
+function findMatch(matchNumber: number): Match {
   const match = fifaWorldCup2026Snapshot.matches.find(
     (candidate) => candidate.matchNumber === matchNumber,
   );
 
-  expect(match).toBeDefined();
-  return expect(match as Match);
+  if (!match) {
+    throw new Error(`Unknown match number: ${matchNumber}`);
+  }
+
+  return match;
+}
+
+function expectGoal(eventId: string) {
+  const event = fifaWorldCup2026Snapshot.matchEvents.find(
+    (candidate) => candidate.id === eventId,
+  );
+
+  expect(event).toBeDefined();
+  expect(event?.type).toBe("goal");
+  return expect(event);
 }
