@@ -142,15 +142,54 @@ button:hover .journey-marker {
   transform: translateY(-2px);
 }
 
+.match-card-selected {
+  box-shadow:
+    0 0 0 2px color-mix(in oklch, var(--highlight) 22%, transparent),
+    0 24px 55px color-mix(in oklch, black 25%, transparent);
+}
+
+.match-details-backdrop {
+  animation: match-details-backdrop-in 180ms ease-out;
+}
+
+.match-details-panel {
+  animation: match-details-panel-in 220ms ease-out;
+}
+
+@keyframes match-details-backdrop-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes match-details-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem);
+  }
+}
+
 @media (max-width: 1023px) {
   .journey-track::before {
     display: none;
   }
 }
 
+@media (min-width: 1024px) {
+  @keyframes match-details-panel-in {
+    from {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .journey-marker,
-  .match-card {
+  .match-card,
+  .match-details-backdrop,
+  .match-details-panel {
+    animation: none;
     transition: none;
   }
 

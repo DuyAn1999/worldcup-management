@@ -74,6 +74,84 @@ describe("MatchExplorer", () => {
     );
     expect(within(shootoutMatch).getByText("Winner")).toBeInTheDocument();
   });
+
+  it("opens match details and restores focus when closed", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    const openingMatchButton = screen.getByRole("button", {
+      name: "View details for Match 1: Mexico versus South Africa",
+    });
+    await user.click(openingMatchButton);
+
+    const dialog = screen.getByRole("dialog", {
+      name: "Match 1 details",
+    });
+    expect(openingMatchButton).toHaveAttribute("aria-expanded", "true");
+    expect(within(dialog).getByText("Mexico City Stadium")).toBeInTheDocument();
+    expect(within(dialog).getByText("Mexico City, MX")).toBeInTheDocument();
+
+    const closeButton = within(dialog).getByRole("button", {
+      name: "Close match details",
+    });
+    expect(closeButton).toHaveFocus();
+    await user.click(closeButton);
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(openingMatchButton).toHaveFocus();
+    expect(openingMatchButton).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows decision context in extra-time and penalty match details", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Final" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 104: Spain versus Argentina",
+      }),
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByText(
+        "Decided after extra time",
+      ),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Round of 32" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 74: Germany versus Paraguay",
+      }),
+    );
+
+    expect(
+      within(screen.getByRole("dialog")).getByText(
+        "Germany 3–4 Paraguay on penalties",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("dismisses details from the backdrop and when filtering removes the match", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    const openingMatchButton = screen.getByRole("button", {
+      name: "View details for Match 1: Mexico versus South Africa",
+    });
+    await user.click(openingMatchButton);
+    await user.click(screen.getByTestId("match-details-backdrop"));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await user.click(openingMatchButton);
+    await user.click(screen.getByRole("button", { name: "Final" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("1 match shown")).toBeInTheDocument();
+  });
 });
 
 function getMatchCard(matchNumber: number) {

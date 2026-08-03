@@ -1,11 +1,20 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import type {
   Match,
   MatchStage,
+  Team as TeamType,
   TournamentSnapshot,
+  Venue,
 } from "@/domain/tournament/types";
 
 type StageFilter = "all" | MatchStage;
@@ -32,7 +41,9 @@ type MatchExplorerProps = Readonly<{
 export function MatchExplorer({ snapshot }: MatchExplorerProps) {
   const [selectedStage, setSelectedStage] = useState<StageFilter>("all");
   const [selectedGroup, setSelectedGroup] = useState("all");
+  const [selectedMatchId, setSelectedMatchId] = useState<string>();
   const groupFilterId = useId();
+  const returnFocusRef = useRef<HTMLButtonElement>(null);
   const teamsById = useMemo(
     () => new Map(snapshot.teams.map((team) => [team.id, team])),
     [snapshot.teams],
@@ -60,26 +71,48 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
     [snapshot.matches],
   );
 
-  const filteredMatches = snapshot.matches.filter((match) => {
-    const matchesStage =
-      selectedStage === "all" || match.stage === selectedStage;
-    const matchesGroup =
-      selectedGroup === "all" || match.groupId === selectedGroup;
+  const filteredMatches = useMemo(
+    () =>
+      snapshot.matches.filter((match) =>
+        matchesFilters(match, selectedStage, selectedGroup),
+      ),
+    [selectedGroup, selectedStage, snapshot.matches],
+  );
+  const selectedMatch = selectedMatchId
+    ? snapshot.matches.find((match) => match.id === selectedMatchId)
+    : undefined;
+  const selectedHomeTeam =
+    selectedMatch?.home.type === "team"
+      ? teamsById.get(selectedMatch.home.teamId)
+      : undefined;
+  const selectedAwayTeam =
+    selectedMatch?.away.type === "team"
+      ? teamsById.get(selectedMatch.away.teamId)
+      : undefined;
+  const selectedVenue = selectedMatch?.venueId
+    ? venuesById.get(selectedMatch.venueId)
+    : undefined;
 
-    return matchesStage && matchesGroup;
-  });
+  const closeDetails = useCallback(() => {
+    setSelectedMatchId(undefined);
+    returnFocusRef.current?.focus();
+  }, []);
 
   function selectStage(stage: StageFilter) {
+    const nextGroup = stage !== "all" && stage !== "group" ? "all" : selectedGroup;
     setSelectedStage(stage);
-    if (stage !== "all" && stage !== "group") {
-      setSelectedGroup("all");
+    setSelectedGroup(nextGroup);
+    if (selectedMatch && !matchesFilters(selectedMatch, stage, nextGroup)) {
+      setSelectedMatchId(undefined);
     }
   }
 
   function selectGroup(groupId: string) {
+    const nextStage = groupId !== "all" ? "group" : selectedStage;
     setSelectedGroup(groupId);
-    if (groupId !== "all") {
-      setSelectedStage("group");
+    setSelectedStage(nextStage);
+    if (selectedMatch && !matchesFilters(selectedMatch, nextStage, groupId)) {
+      setSelectedMatchId(undefined);
     }
   }
 
@@ -191,70 +224,89 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
               ? venuesById.get(match.venueId)
               : undefined;
             const winnerTeamId = getWinnerTeamId(match);
+            const isSelected = match.id === selectedMatchId;
 
             if (!homeTeam || !awayTeam) return null;
 
             return (
               <li key={match.id}>
-                <article className="match-card h-full overflow-hidden rounded-2xl border border-line bg-surface-raised">
-                  <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-xs text-secondary">
-                    <p className="font-semibold uppercase tracking-[0.12em]">
-                      Match {match.matchNumber}
-                    </p>
-                    <p>{getStageLabel(match, snapshot)}</p>
-                  </header>
+                <article
+                  className={`match-card h-full overflow-hidden rounded-2xl border bg-surface-raised ${isSelected ? "match-card-selected border-highlight" : "border-line"}`}
+                >
+                  <button
+                    aria-expanded={isSelected}
+                    aria-haspopup="dialog"
+                    aria-label={`View details for Match ${match.matchNumber}: ${homeTeam.name} versus ${awayTeam.name}`}
+                    className="block h-full w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-highlight focus-visible:ring-inset"
+                    onClick={(event) => {
+                      returnFocusRef.current = event.currentTarget;
+                      setSelectedMatchId(match.id);
+                    }}
+                    type="button"
+                  >
+                    <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3 text-xs text-secondary">
+                      <p className="font-semibold uppercase tracking-[0.12em]">
+                        Match {match.matchNumber}
+                      </p>
+                      <p>{getStageLabel(match, snapshot)}</p>
+                    </header>
 
-                  <div className="p-4">
-                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-secondary">
-                      {formatKickoff(
-                        match.kickoffAt,
-                        snapshot.tournament.displayTimeZone,
-                      )}
-                    </p>
-
-                    <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3">
-                      <Team
-                        isWinner={winnerTeamId === homeTeam.id}
-                        team={homeTeam}
-                      />
-                      <Score
-                        isWinner={winnerTeamId === homeTeam.id}
-                        value={match.score?.fullTime.home}
-                      />
-                      <Team
-                        isWinner={winnerTeamId === awayTeam.id}
-                        team={awayTeam}
-                      />
-                      <Score
-                        isWinner={winnerTeamId === awayTeam.id}
-                        value={match.score?.fullTime.away}
-                      />
-                    </div>
-
-                    {match.score?.decidedBy === "extra_time" ? (
-                      <ResultNote>After extra time</ResultNote>
-                    ) : null}
-                    {match.score?.decidedBy === "penalties" &&
-                    match.score.penalties ? (
-                      <ResultNote>
-                        {getPenaltyWinner(match, homeTeam.name, awayTeam.name)} win{" "}
-                        {Math.max(
-                          match.score.penalties.home,
-                          match.score.penalties.away,
+                    <div className="p-4">
+                      <p className="text-xs font-medium uppercase tracking-[0.12em] text-secondary">
+                        {formatKickoff(
+                          match.kickoffAt,
+                          snapshot.tournament.displayTimeZone,
                         )}
-                        –
-                        {Math.min(
-                          match.score.penalties.home,
-                          match.score.penalties.away,
-                        )}{" "}
-                        on penalties
-                      </ResultNote>
-                    ) : null}
+                      </p>
 
-                    <p className="mt-5 border-t border-line pt-3 text-sm text-secondary">
-                      {venue?.name ?? "Venue to be confirmed"}
-                    </p>
-                  </div>
+                      <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3">
+                        <Team
+                          isWinner={winnerTeamId === homeTeam.id}
+                          team={homeTeam}
+                        />
+                        <Score
+                          isWinner={winnerTeamId === homeTeam.id}
+                          value={match.score?.fullTime.home}
+                        />
+                        <Team
+                          isWinner={winnerTeamId === awayTeam.id}
+                          team={awayTeam}
+                        />
+                        <Score
+                          isWinner={winnerTeamId === awayTeam.id}
+                          value={match.score?.fullTime.away}
+                        />
+                      </div>
+
+                      {match.score?.decidedBy === "extra_time" ? (
+                        <ResultNote>After extra time</ResultNote>
+                      ) : null}
+                      {match.score?.decidedBy === "penalties" &&
+                      match.score.penalties ? (
+                        <ResultNote>
+                          {getPenaltyWinner(
+                            match,
+                            homeTeam.name,
+                            awayTeam.name,
+                          )}{" "}
+                          win {Math.max(
+                            match.score.penalties.home,
+                            match.score.penalties.away,
+                          )}
+                          –
+                          {Math.min(
+                            match.score.penalties.home,
+                            match.score.penalties.away,
+                          )}{" "}
+                          on penalties
+                        </ResultNote>
+                      ) : null}
+
+                      <p className="mt-5 border-t border-line pt-3 text-sm text-secondary">
+                        {venue?.name ?? "Venue to be confirmed"}
+                      </p>
+                    </div>
+                  </button>
                 </article>
               </li>
             );
@@ -265,8 +317,221 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
           No matches are available for this route.
         </div>
       )}
+
+      {selectedMatch && selectedHomeTeam && selectedAwayTeam ? (
+        <MatchDetailsPanel
+          awayTeam={selectedAwayTeam}
+          displayTimeZone={snapshot.tournament.displayTimeZone}
+          homeTeam={selectedHomeTeam}
+          match={selectedMatch}
+          onClose={closeDetails}
+          stageLabel={getStageLabel(selectedMatch, snapshot)}
+          venue={selectedVenue}
+        />
+      ) : null}
     </section>
   );
+}
+
+function MatchDetailsPanel({
+  awayTeam,
+  displayTimeZone,
+  homeTeam,
+  match,
+  onClose,
+  stageLabel,
+  venue,
+}: Readonly<{
+  awayTeam: TeamType;
+  displayTimeZone: string;
+  homeTeam: TeamType;
+  match: Match;
+  onClose: () => void;
+  stageLabel: string;
+  venue: Venue | undefined;
+}>) {
+  const panelRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const titleId = useId();
+  const winnerTeamId = getWinnerTeamId(match);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+
+      const focusableElements = panelRef.current?.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      if (!focusableElements?.length) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      className="match-details-backdrop fixed inset-0 z-50 flex items-end justify-center bg-black/75 sm:p-6 lg:items-stretch lg:justify-end"
+      data-testid="match-details-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        aria-labelledby={titleId}
+        aria-modal="true"
+        className="match-details-panel max-h-[92vh] w-full overflow-y-auto rounded-t-[2rem] border border-line bg-surface-raised shadow-2xl shadow-black/40 sm:max-w-2xl sm:rounded-[2rem] lg:h-full lg:max-h-none lg:max-w-xl"
+        ref={panelRef}
+        role="dialog"
+      >
+        <header className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b border-line bg-surface-raised/95 px-5 py-4 backdrop-blur sm:px-7">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-highlight">
+              {stageLabel}
+            </p>
+            <h2 className="mt-1 text-xl font-semibold" id={titleId}>
+              Match {match.matchNumber} details
+            </h2>
+          </div>
+          <button
+            aria-label="Close match details"
+            className="grid size-10 shrink-0 place-items-center rounded-full border border-line bg-stadium text-xl text-secondary transition hover:border-highlight hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight"
+            onClick={onClose}
+            ref={closeButtonRef}
+            type="button"
+          >
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
+
+        <div className="px-5 py-7 sm:px-7 sm:py-9">
+          <p className="text-sm font-medium uppercase tracking-[0.12em] text-secondary">
+            {formatKickoff(match.kickoffAt, displayTimeZone)}
+          </p>
+
+          <div className="mt-7 rounded-3xl border border-line bg-stadium/55 p-5 sm:p-6">
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-start gap-3 text-center">
+              <DetailTeam
+                isWinner={winnerTeamId === homeTeam.id}
+                team={homeTeam}
+              />
+              <div className="pt-4">
+                <p className="text-3xl font-semibold tabular-nums sm:text-4xl">
+                  {match.score
+                    ? `${match.score.fullTime.home}–${match.score.fullTime.away}`
+                    : "–"}
+                </p>
+                <p className="mt-2 text-xs uppercase tracking-[0.14em] text-secondary">
+                  Full time
+                </p>
+              </div>
+              <DetailTeam
+                isWinner={winnerTeamId === awayTeam.id}
+                team={awayTeam}
+              />
+            </div>
+
+            {match.score?.decidedBy === "extra_time" ? (
+              <ResultNote>Decided after extra time</ResultNote>
+            ) : null}
+            {match.score?.decidedBy === "penalties" && match.score.penalties ? (
+              <ResultNote>
+                {homeTeam.name} {match.score.penalties.home}–
+                {match.score.penalties.away} {awayTeam.name} on penalties
+              </ResultNote>
+            ) : null}
+          </div>
+
+          <dl className="mt-7 grid gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-2">
+            <DetailItem label="Stage" value={stageLabel} />
+            <DetailItem label="Status" value={formatStatus(match.status)} />
+            <DetailItem
+              label="Venue"
+              value={venue?.name ?? "To be confirmed"}
+            />
+            <DetailItem
+              label="Location"
+              value={
+                venue ? `${venue.city}, ${venue.countryCode}` : "To be confirmed"
+              }
+            />
+          </dl>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function DetailTeam({
+  isWinner,
+  team,
+}: Readonly<{ isWinner: boolean; team: TeamType }>) {
+  return (
+    <div className="flex min-w-0 flex-col items-center">
+      <span
+        className={`grid size-12 place-items-center rounded-full border text-xs font-bold tracking-wide ${isWinner ? "border-highlight bg-highlight text-stadium shadow-[0_0_20px_color-mix(in_oklch,var(--highlight)_25%,transparent)]" : "border-line bg-surface text-highlight"}`}
+      >
+        {team.code}
+      </span>
+      <p
+        className={`mt-3 text-sm font-semibold leading-5 sm:text-base ${isWinner ? "text-highlight" : ""}`}
+      >
+        {team.name}
+      </p>
+      {isWinner ? (
+        <span className="mt-2 rounded-full bg-highlight/10 px-2 py-0.5 text-[0.6rem] font-bold uppercase tracking-[0.12em] text-highlight">
+          Winner
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function DetailItem({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="bg-surface px-4 py-4">
+      <dt className="text-xs font-semibold uppercase tracking-[0.14em] text-secondary">
+        {label}
+      </dt>
+      <dd className="mt-1.5 text-sm font-medium text-foreground">{value}</dd>
+    </div>
+  );
+}
+
+function matchesFilters(
+  match: Match,
+  stage: StageFilter,
+  groupId: string,
+) {
+  const matchesStage = stage === "all" || match.stage === stage;
+  const matchesGroup = groupId === "all" || match.groupId === groupId;
+
+  return matchesStage && matchesGroup;
 }
 
 function Team({
@@ -364,6 +629,10 @@ function getWinnerTeamId(match: Match) {
   return decidingScore.home > decidingScore.away
     ? match.home.teamId
     : match.away.teamId;
+}
+
+function formatStatus(status: Match["status"]) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 
 function formatKickoff(kickoffAt: string, timeZone: string) {
