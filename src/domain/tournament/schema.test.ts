@@ -4,7 +4,27 @@ import {
   parseTournamentSnapshot,
   safeParseTournamentSnapshot,
 } from "./schema";
-import type { TournamentSnapshot } from "./types";
+import type { TeamSheetPlayer, TournamentSnapshot } from "./types";
+
+const mexicoTeamSheetPlayers = [
+  { playerId: "mexico-goalkeeper", shirtNumber: 1, role: "goalkeeper" },
+  { playerId: "mexico-defender-1", shirtNumber: 2, role: "defender" },
+  { playerId: "mexico-defender-2", shirtNumber: 3, role: "defender" },
+  { playerId: "mexico-defender-3", shirtNumber: 4, role: "defender" },
+  { playerId: "mexico-defender-4", shirtNumber: 5, role: "defender" },
+  { playerId: "mexico-midfielder-1", shirtNumber: 6, role: "midfielder" },
+  { playerId: "mexico-assistant", shirtNumber: 7, role: "midfielder" },
+  { playerId: "mexico-midfielder-2", shirtNumber: 8, role: "midfielder" },
+  { playerId: "mexico-scorer", shirtNumber: 9, role: "forward" },
+  { playerId: "mexico-forward-1", shirtNumber: 10, role: "forward" },
+  { playerId: "mexico-forward-2", shirtNumber: 11, role: "forward" },
+  {
+    playerId: "mexico-backup-goalkeeper",
+    shirtNumber: 12,
+    role: "goalkeeper",
+  },
+  { playerId: "mexico-substitute", shirtNumber: 13, role: "midfielder" },
+] as const satisfies readonly TeamSheetPlayer[];
 
 function createValidSnapshot(): TournamentSnapshot {
   return {
@@ -35,16 +55,11 @@ function createValidSnapshot(): TournamentSnapshot {
       },
     ],
     players: [
-      {
-        id: "mexico-scorer",
+      ...mexicoTeamSheetPlayers.map((player) => ({
+        id: player.playerId,
         teamId: "mexico",
-        name: "Mexico Scorer",
-      },
-      {
-        id: "mexico-assistant",
-        teamId: "mexico",
-        name: "Mexico Assistant",
-      },
+        name: player.playerId,
+      })),
       {
         id: "south-africa-defender",
         teamId: "south-africa",
@@ -95,6 +110,19 @@ function createValidSnapshot(): TournamentSnapshot {
         away: { type: "match_winner", matchId: "match-1" },
         kickoffAt: "2026-06-28T15:00:00-07:00",
         status: "scheduled",
+      },
+    ],
+    teamSheets: [
+      {
+        matchId: "match-1",
+        teamId: "mexico",
+        headCoach: {
+          id: "mexico-head-coach",
+          name: "Mexico Head Coach",
+        },
+        formation: "4-3-3",
+        starters: mexicoTeamSheetPlayers.slice(0, 11),
+        substitutes: mexicoTeamSheetPlayers.slice(11),
       },
     ],
     matchEvents: [
@@ -421,6 +449,170 @@ describe("parseTournamentSnapshot", () => {
         ),
       ).toBe(true);
     }
+  });
+
+  it("rejects duplicate team sheets for the same match and team", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      teamSheets: [snapshot.teamSheets[0], snapshot.teamSheets[0]],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Duplicate team sheet"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("requires a team-sheet team to participate in its match", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      teamSheets: [
+        {
+          ...snapshot.teamSheets[0],
+          matchId: "match-73",
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("does not participate in match"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("validates team-sheet player references and team membership", () => {
+    const snapshot = createValidSnapshot();
+    const teamSheet = snapshot.teamSheets[0];
+    const results = ["unknown-player", "south-africa-defender"].map(
+      (playerId) =>
+        safeParseTournamentSnapshot({
+          ...snapshot,
+          teamSheets: [
+            {
+              ...teamSheet,
+              starters: [
+                { ...teamSheet.starters[0], playerId },
+                ...teamSheet.starters.slice(1),
+              ],
+            },
+          ],
+        }),
+    );
+
+    expect(results.every((result) => !result.success)).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("Unknown player reference"),
+          ),
+      ),
+    ).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("does not belong to team-sheet team"),
+          ),
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects duplicate players and shirt numbers across starters and substitutes", () => {
+    const snapshot = createValidSnapshot();
+    const teamSheet = snapshot.teamSheets[0];
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      teamSheets: [
+        {
+          ...teamSheet,
+          substitutes: [
+            {
+              ...teamSheet.substitutes[0],
+              playerId: teamSheet.starters[0].playerId,
+              shirtNumber: teamSheet.starters[0].shirtNumber,
+            },
+          ],
+        },
+      ],
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Duplicate team-sheet player"),
+        ),
+      ).toBe(true);
+      expect(
+        result.error.issues.some((issue) =>
+          issue.message.includes("Duplicate team-sheet shirt number"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("validates starting lineup size, goalkeeper count, and formation", () => {
+    const snapshot = createValidSnapshot();
+    const teamSheet = snapshot.teamSheets[0];
+    const invalidTeamSheets = [
+      { ...teamSheet, starters: teamSheet.starters.slice(0, 10) },
+      {
+        ...teamSheet,
+        starters: teamSheet.starters.map((player, index) =>
+          index === 0 ? { ...player, role: "defender" } : player,
+        ),
+      },
+      { ...teamSheet, formation: "4-4" },
+      { ...teamSheet, formation: "four-three-three" },
+    ];
+    const results = invalidTeamSheets.map((invalidTeamSheet) =>
+      safeParseTournamentSnapshot({
+        ...snapshot,
+        teamSheets: [invalidTeamSheet],
+      }),
+    );
+
+    expect(results.every((result) => !result.success)).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("exactly one goalkeeper"),
+          ),
+      ),
+    ).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("10 outfield players"),
+          ),
+      ),
+    ).toBe(true);
+    expect(
+      results.some(
+        (result) =>
+          !result.success &&
+          result.error.issues.some((issue) =>
+            issue.message.includes("format such as 4-3-3"),
+          ),
+      ),
+    ).toBe(true);
   });
 
   it("rejects invalid event minutes and stoppage time", () => {

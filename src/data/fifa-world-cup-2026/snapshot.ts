@@ -19,6 +19,7 @@ export const fifaWorldCup2026Snapshot = parseTournamentSnapshot({
   groups: fifaWorldCup2026Groups,
   venues: fifaWorldCup2026Venues,
   matches: fifaWorldCup2026Matches,
+  teamSheets: [],
   matchEvents: fifaWorldCup2026MatchEvents,
   provenance: fifaWorldCup2026Provenance,
 });

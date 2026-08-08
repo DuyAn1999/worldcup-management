@@ -76,6 +76,33 @@ export interface Player {
   readonly name: string;
 }
 
+export const teamSheetPlayerRoles = [
+  "goalkeeper",
+  "defender",
+  "midfielder",
+  "forward",
+] as const;
+export type TeamSheetPlayerRole = (typeof teamSheetPlayerRoles)[number];
+
+export interface TeamSheetPlayer {
+  readonly playerId: PlayerId;
+  readonly shirtNumber: number;
+  readonly role: TeamSheetPlayerRole;
+}
+
+export interface MatchTeamSheet {
+  readonly matchId: MatchId;
+  readonly teamId: TeamId;
+  readonly headCoach: {
+    readonly id: string;
+    readonly name: string;
+  };
+  /** Outfield structure only; the goalkeeper is implicit. */
+  readonly formation: string;
+  readonly starters: readonly TeamSheetPlayer[];
+  readonly substitutes: readonly TeamSheetPlayer[];
+}
+
 export interface Group {
   readonly id: GroupId;
   readonly name: string;
@@ -184,6 +211,7 @@ export interface TournamentSnapshot {
   readonly groups: readonly Group[];
   readonly venues: readonly Venue[];
   readonly matches: readonly Match[];
+  readonly teamSheets: readonly MatchTeamSheet[];
   readonly matchEvents: readonly MatchEvent[];
   readonly provenance: TournamentProvenance;
 }

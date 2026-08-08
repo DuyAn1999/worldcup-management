@@ -6,6 +6,7 @@ import {
   matchDecisions,
   matchStages,
   matchStatuses,
+  teamSheetPlayerRoles,
   tournamentModes,
   tournamentSourceKinds,
   tournamentStatuses,
@@ -68,6 +69,88 @@ export const playerSchema = z
     name: z.string().trim().min(1).max(120),
   })
   .strict();
+
+export const teamSheetPlayerSchema = z
+  .object({
+    playerId: entityIdSchema,
+    shirtNumber: z.number().int().positive().max(99),
+    role: z.enum(teamSheetPlayerRoles),
+  })
+  .strict();
+
+const formationSchema = z
+  .string()
+  .trim()
+  .regex(/^\d(?:-\d)+$/, "Formation must use a format such as 4-3-3")
+  .refine(
+    (formation) =>
+      formation
+        .split("-")
+        .map(Number)
+        .reduce((total, line) => total + line, 0) === 10,
+    { message: "Formation must account for 10 outfield players" },
+  );
+
+export const matchTeamSheetSchema = z
+  .object({
+    matchId: entityIdSchema,
+    teamId: entityIdSchema,
+    headCoach: z
+      .object({
+        id: entityIdSchema,
+        name: z.string().trim().min(1).max(120),
+      })
+      .strict(),
+    formation: formationSchema,
+    starters: z.array(teamSheetPlayerSchema).length(11),
+    substitutes: z.array(teamSheetPlayerSchema),
+  })
+  .strict()
+  .superRefine((teamSheet, context) => {
+    const listedPlayers = [
+      ...teamSheet.starters.map((player, index) => ({
+        player,
+        path: ["starters", index] as const,
+      })),
+      ...teamSheet.substitutes.map((player, index) => ({
+        player,
+        path: ["substitutes", index] as const,
+      })),
+    ];
+    const playerIds = new Set<string>();
+    const shirtNumbers = new Set<number>();
+
+    listedPlayers.forEach(({ player, path }) => {
+      if (playerIds.has(player.playerId)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate team-sheet player: ${player.playerId}`,
+          path: [...path, "playerId"],
+        });
+      }
+      playerIds.add(player.playerId);
+
+      if (shirtNumbers.has(player.shirtNumber)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate team-sheet shirt number: ${player.shirtNumber}`,
+          path: [...path, "shirtNumber"],
+        });
+      }
+      shirtNumbers.add(player.shirtNumber);
+    });
+
+    const startingGoalkeepers = teamSheet.starters.filter(
+      (player) => player.role === "goalkeeper",
+    );
+    if (startingGoalkeepers.length !== 1) {
+      context.addIssue({
+        code: "custom",
+        message: "A starting lineup must contain exactly one goalkeeper",
+        path: ["starters"],
+      });
+    }
+  });
 
 export const groupSchema = z
   .object({
@@ -248,6 +331,7 @@ export const tournamentSnapshotSchema = z
     groups: z.array(groupSchema),
     venues: z.array(venueSchema),
     matches: z.array(matchSchema),
+    teamSheets: z.array(matchTeamSheetSchema),
     matchEvents: z.array(matchEventSchema),
     provenance: tournamentProvenanceSchema,
   })
@@ -271,6 +355,7 @@ export const tournamentSnapshotSchema = z
     );
     const matchIds = new Set(matchesById.keys());
     const assignedTeams = new Map<string, string>();
+    const teamSheetKeys = new Set<string>();
 
     snapshot.players.forEach((player, playerIndex) => {
       if (!teamIds.has(player.teamId)) {
@@ -363,6 +448,85 @@ export const tournamentSnapshotSchema = z
           "A team cannot play itself",
         );
       }
+    });
+
+    snapshot.teamSheets.forEach((teamSheet, teamSheetIndex) => {
+      const teamSheetPath = ["teamSheets", teamSheetIndex];
+      const match = matchesById.get(teamSheet.matchId);
+      const key = `${teamSheet.matchId}:${teamSheet.teamId}`;
+
+      if (teamSheetKeys.has(key)) {
+        context.addIssue({
+          code: "custom",
+          message: `Duplicate team sheet for ${teamSheet.teamId} in ${teamSheet.matchId}`,
+          path: teamSheetPath,
+        });
+      }
+      teamSheetKeys.add(key);
+
+      if (!match) {
+        addReferenceIssue(
+          context,
+          [...teamSheetPath, "matchId"],
+          `Unknown match reference: ${teamSheet.matchId}`,
+        );
+      }
+
+      if (!teamIds.has(teamSheet.teamId)) {
+        addReferenceIssue(
+          context,
+          [...teamSheetPath, "teamId"],
+          `Unknown team reference: ${teamSheet.teamId}`,
+        );
+      } else if (
+        match &&
+        !(
+          (match.home.type === "team" &&
+            match.home.teamId === teamSheet.teamId) ||
+          (match.away.type === "team" &&
+            match.away.teamId === teamSheet.teamId)
+        )
+      ) {
+        addReferenceIssue(
+          context,
+          [...teamSheetPath, "teamId"],
+          `Team-sheet team ${teamSheet.teamId} does not participate in match ${teamSheet.matchId}`,
+        );
+      }
+
+      [...teamSheet.starters, ...teamSheet.substitutes].forEach(
+        (listedPlayer, listedPlayerIndex) => {
+          const player = playersById.get(listedPlayer.playerId);
+          const collection =
+            listedPlayerIndex < teamSheet.starters.length
+              ? "starters"
+              : "substitutes";
+          const collectionIndex =
+            collection === "starters"
+              ? listedPlayerIndex
+              : listedPlayerIndex - teamSheet.starters.length;
+          const playerPath = [
+            ...teamSheetPath,
+            collection,
+            collectionIndex,
+            "playerId",
+          ];
+
+          if (!player) {
+            addReferenceIssue(
+              context,
+              playerPath,
+              `Unknown player reference: ${listedPlayer.playerId}`,
+            );
+          } else if (player.teamId !== teamSheet.teamId) {
+            addReferenceIssue(
+              context,
+              playerPath,
+              `Player ${listedPlayer.playerId} does not belong to team-sheet team ${teamSheet.teamId}`,
+            );
+          }
+        },
+      );
     });
 
     const sequencesByMatchId = new Map<string, Set<number>>();

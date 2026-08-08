@@ -16,6 +16,7 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(fifaWorldCup2026Snapshot.venues).toHaveLength(16);
     expect(fifaWorldCup2026Snapshot.matches).toHaveLength(104);
     expect(fifaWorldCup2026Snapshot.players).toHaveLength(126);
+    expect(fifaWorldCup2026Snapshot.teamSheets).toEqual([]);
     expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(188);
     expect(
       fifaWorldCup2026Snapshot.groups.every(
