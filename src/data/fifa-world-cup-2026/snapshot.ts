@@ -10,6 +10,7 @@ import {
 } from "./metadata";
 import { fifaWorldCup2026Teams } from "./teams";
 import { fifaWorldCup2026Players } from "./players";
+import { fifaWorldCup2026TeamSheets } from "./team-sheets";
 import { fifaWorldCup2026Venues } from "./venues";
 
 export const fifaWorldCup2026Snapshot = parseTournamentSnapshot({
@@ -19,7 +20,7 @@ export const fifaWorldCup2026Snapshot = parseTournamentSnapshot({
   groups: fifaWorldCup2026Groups,
   venues: fifaWorldCup2026Venues,
   matches: fifaWorldCup2026Matches,
-  teamSheets: [],
+  teamSheets: fifaWorldCup2026TeamSheets,
   matchEvents: fifaWorldCup2026MatchEvents,
   provenance: fifaWorldCup2026Provenance,
 });

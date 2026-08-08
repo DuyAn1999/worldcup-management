@@ -15,14 +15,51 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(fifaWorldCup2026Snapshot.groups).toHaveLength(12);
     expect(fifaWorldCup2026Snapshot.venues).toHaveLength(16);
     expect(fifaWorldCup2026Snapshot.matches).toHaveLength(104);
-    expect(fifaWorldCup2026Snapshot.players).toHaveLength(126);
-    expect(fifaWorldCup2026Snapshot.teamSheets).toEqual([]);
+    expect(fifaWorldCup2026Snapshot.players).toHaveLength(158);
+    expect(fifaWorldCup2026Snapshot.teamSheets).toHaveLength(2);
     expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(188);
     expect(
       fifaWorldCup2026Snapshot.groups.every(
         (group) => group.teamIds.length === 4,
       ),
     ).toBe(true);
+  });
+
+  it("contains the verified Match 104 team sheets", () => {
+    const spain = fifaWorldCup2026Snapshot.teamSheets.find(
+      (teamSheet) => teamSheet.teamId === "spain",
+    );
+    const argentina = fifaWorldCup2026Snapshot.teamSheets.find(
+      (teamSheet) => teamSheet.teamId === "argentina",
+    );
+
+    expect(spain).toMatchObject({
+      matchId: "match-104",
+      formation: "4-1-2-3",
+      headCoach: {
+        id: "fifa-430724",
+        name: "Luis de la Fuente Castillo",
+      },
+    });
+    expect(argentina).toMatchObject({
+      matchId: "match-104",
+      formation: "4-4-2",
+      headCoach: {
+        id: "fifa-183380",
+        name: "Lionel SCALONI",
+      },
+    });
+
+    for (const teamSheet of [spain, argentina]) {
+      expect(teamSheet?.starters).toHaveLength(11);
+      expect(teamSheet?.substitutes).toHaveLength(15);
+    }
+    expect(spain?.substitutes).toContainEqual(
+      expect.objectContaining({ playerId: "fifa-405545", shirtNumber: 7 }),
+    );
+    expect(argentina?.starters).toContainEqual(
+      expect.objectContaining({ playerId: "fifa-229397", shirtNumber: 10 }),
+    );
   });
 
   it("attributes every knockout goal to the verified final score", () => {

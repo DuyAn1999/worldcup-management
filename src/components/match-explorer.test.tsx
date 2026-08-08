@@ -134,6 +134,73 @@ describe("MatchExplorer", () => {
     ).toBeInTheDocument();
   });
 
+  it("explores the final formations, players, and substitutes", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Final" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 104: Spain versus Argentina",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Match 104 details" });
+    expect(within(dialog).getByRole("tab", { name: "Overview" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(
+      within(dialog).getByText(/Luis de la Fuente Castillo/),
+    ).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Unai SIMON, number 23, Goalkeeper",
+      }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "Unai SIMON, number 23, Goalkeeper",
+      }),
+    );
+    expect(within(dialog).getByText("Starting XI · Goalkeeper")).toBeInTheDocument();
+
+    await user.click(within(dialog).getByText("Substitutes"));
+    await user.click(
+      within(dialog).getByRole("button", { name: /Ferran TORRES/ }),
+    );
+    expect(within(dialog).getByText("Substitute · Forward")).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: /Argentina · 4-4-2/ }),
+    );
+    expect(within(dialog).getByText(/Lionel SCALONI/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", {
+        name: "Lionel MESSI, number 10, Forward",
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a lineup fallback for matches without imported team sheets", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 1: Mexico versus South Africa",
+      }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Match 1 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(within(dialog).getByText("Lineup not available")).toBeInTheDocument();
+  });
+
   it("dismisses details from the backdrop and when filtering removes the match", async () => {
     const user = userEvent.setup();
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);

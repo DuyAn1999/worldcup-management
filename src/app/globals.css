@@ -156,6 +156,61 @@ button:hover .journey-marker {
   animation: match-details-panel-in 220ms ease-out;
 }
 
+.formation-pitch {
+  position: relative;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at 50% 46%,
+      color-mix(in oklch, var(--highlight) 20%, transparent),
+      transparent 42%
+    ),
+    repeating-linear-gradient(
+      0deg,
+      color-mix(in oklch, var(--highlight) 13%, var(--stadium)) 0 11%,
+      color-mix(in oklch, var(--highlight) 18%, var(--stadium)) 11% 22%
+    );
+}
+
+.formation-pitch::before {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: color-mix(in oklch, var(--foreground) 28%, transparent);
+}
+
+.formation-pitch::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 28%;
+  aspect-ratio: 1;
+  content: "";
+  border: 1px solid color-mix(in oklch, var(--foreground) 28%, transparent);
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+}
+
+.formation-penalty-area {
+  position: absolute;
+  left: 50%;
+  width: 54%;
+  height: 16%;
+  border: 1px solid color-mix(in oklch, var(--foreground) 28%, transparent);
+  transform: translateX(-50%);
+}
+
+.formation-penalty-area-top {
+  top: -1px;
+}
+
+.formation-penalty-area-bottom {
+  bottom: -1px;
+}
+
 @keyframes match-details-backdrop-in {
   from {
     opacity: 0;
@@ -188,7 +243,8 @@ button:hover .journey-marker {
   .journey-marker,
   .match-card,
   .match-details-backdrop,
-  .match-details-panel {
+  .match-details-panel,
+  .formation-pitch button span {
     animation: none;
     transition: none;
   }

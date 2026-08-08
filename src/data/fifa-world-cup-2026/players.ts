@@ -22,9 +22,39 @@ export const fifaWorldCup2026Players = [
     name: "Cristian ROMERO",
   },
   {
+    id: "fifa-308300",
+    teamId: "argentina",
+    name: "Emiliano MARTINEZ",
+  },
+  {
     id: "fifa-448252",
     teamId: "argentina",
     name: "Enzo FERNANDEZ",
+  },
+  {
+    id: "fifa-389485",
+    teamId: "argentina",
+    name: "Exequiel PALACIOS",
+  },
+  {
+    id: "fifa-418963",
+    teamId: "argentina",
+    name: "Facundo MEDINA",
+  },
+  {
+    id: "fifa-394824",
+    teamId: "argentina",
+    name: "Geronimo RULLI",
+  },
+  {
+    id: "fifa-395414",
+    teamId: "argentina",
+    name: "Giovani Lo Celso",
+  },
+  {
+    id: "fifa-485595",
+    teamId: "argentina",
+    name: "Giuliano SIMEONE",
   },
   {
     id: "fifa-402926",
@@ -35,6 +65,11 @@ export const fifaWorldCup2026Players = [
     id: "fifa-495054",
     teamId: "argentina",
     name: "Jose Manuel LOPEZ",
+  },
+  {
+    id: "fifa-430624",
+    teamId: "argentina",
+    name: "Juan MUSSO",
   },
   {
     id: "fifa-416081",
@@ -62,6 +97,36 @@ export const fifaWorldCup2026Players = [
     name: "Lisandro MARTINEZ",
   },
   {
+    id: "fifa-402934",
+    teamId: "argentina",
+    name: "Marcos SENESI",
+  },
+  {
+    id: "fifa-402925",
+    teamId: "argentina",
+    name: "Nahuel MOLINA",
+  },
+  {
+    id: "fifa-430631",
+    teamId: "argentina",
+    name: "Nico GONZALEZ",
+  },
+  {
+    id: "fifa-441422",
+    teamId: "argentina",
+    name: "Nico PAZ",
+  },
+  {
+    id: "fifa-310116",
+    teamId: "argentina",
+    name: "Nicolas OTAMENDI",
+  },
+  {
+    id: "fifa-308322",
+    teamId: "argentina",
+    name: "Nicolas TAGLIAFICO",
+  },
+  {
     id: "fifa-428882",
     teamId: "argentina",
     name: "Rodrigo DE PAUL",
@@ -70,6 +135,11 @@ export const fifaWorldCup2026Players = [
     id: "fifa-418975",
     teamId: "argentina",
     name: "Thiago ALMADA",
+  },
+  {
+    id: "fifa-463661",
+    teamId: "argentina",
+    name: "Valentin BARCO",
   },
   {
     id: "fifa-441067",
@@ -552,9 +622,39 @@ export const fifaWorldCup2026Players = [
     name: "Lamine CAMARA",
   },
   {
+    id: "fifa-447860",
+    teamId: "spain",
+    name: "Alex BAENA",
+  },
+  {
+    id: "fifa-391297",
+    teamId: "spain",
+    name: "Alex GRIMALDO",
+  },
+  {
     id: "fifa-335999",
     teamId: "spain",
     name: "Aymeric LAPORTE",
+  },
+  {
+    id: "fifa-447864",
+    teamId: "spain",
+    name: "Borja IGLESIAS",
+  },
+  {
+    id: "fifa-430750",
+    teamId: "spain",
+    name: "Dani OLMO",
+  },
+  {
+    id: "fifa-447853",
+    teamId: "spain",
+    name: "David RAYA",
+  },
+  {
+    id: "fifa-405562",
+    teamId: "spain",
+    name: "Eric GARCIA",
   },
   {
     id: "fifa-430718",
@@ -567,9 +667,39 @@ export const fifaWorldCup2026Players = [
     name: "Ferran TORRES",
   },
   {
+    id: "fifa-447866",
+    teamId: "spain",
+    name: "GAVI",
+  },
+  {
+    id: "fifa-484691",
+    teamId: "spain",
+    name: "Joan GARCIA",
+  },
+  {
+    id: "fifa-484320",
+    teamId: "spain",
+    name: "Lamine YAMAL",
+  },
+  {
     id: "fifa-430735",
     teamId: "spain",
     name: "Marc CUCURELLA",
+  },
+  {
+    id: "fifa-484728",
+    teamId: "spain",
+    name: "Marc PUBILL",
+  },
+  {
+    id: "fifa-382739",
+    teamId: "spain",
+    name: "Marcos LLORENTE",
+  },
+  {
+    id: "fifa-430754",
+    teamId: "spain",
+    name: "Martin ZUBIMENDI",
   },
   {
     id: "fifa-430733",
@@ -582,14 +712,44 @@ export const fifaWorldCup2026Players = [
     name: "Mikel OYARZABAL",
   },
   {
+    id: "fifa-447855",
+    teamId: "spain",
+    name: "Nico WILLIAMS",
+  },
+  {
     id: "fifa-474973",
     teamId: "spain",
     name: "Pau CUBARSI",
   },
   {
+    id: "fifa-423646",
+    teamId: "spain",
+    name: "PEDRI",
+  },
+  {
     id: "fifa-430144",
     teamId: "spain",
     name: "Pedro PORRO",
+  },
+  {
+    id: "fifa-411375",
+    teamId: "spain",
+    name: "RODRI",
+  },
+  {
+    id: "fifa-430753",
+    teamId: "spain",
+    name: "Unai SIMON",
+  },
+  {
+    id: "fifa-492859",
+    teamId: "spain",
+    name: "Victor MUNOZ",
+  },
+  {
+    id: "fifa-423658",
+    teamId: "spain",
+    name: "Yeremy PINO",
   },
   {
     id: "fifa-393480",
