@@ -15,8 +15,8 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(fifaWorldCup2026Snapshot.groups).toHaveLength(12);
     expect(fifaWorldCup2026Snapshot.venues).toHaveLength(16);
     expect(fifaWorldCup2026Snapshot.matches).toHaveLength(104);
-    expect(fifaWorldCup2026Snapshot.players).toHaveLength(60);
-    expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(93);
+    expect(fifaWorldCup2026Snapshot.players).toHaveLength(126);
+    expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(188);
     expect(
       fifaWorldCup2026Snapshot.groups.every(
         (group) => group.teamIds.length === 4,
@@ -96,15 +96,76 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     });
   });
 
+  it("contains the verified knockout player-card totals", () => {
+    const cards = fifaWorldCup2026Snapshot.matchEvents.filter(
+      (event) => event.type === "card",
+    );
+
+    expect(cards).toHaveLength(95);
+    expect(cards.filter((event) => event.cardType === "yellow")).toHaveLength(
+      90,
+    );
+    expect(
+      cards.filter((event) => event.cardType === "second_yellow"),
+    ).toHaveLength(2);
+    expect(cards.filter((event) => event.cardType === "red")).toHaveLength(3);
+  });
+
+  it("preserves representative knockout card semantics", () => {
+    expectCard("match-74-card-2").toMatchObject({
+      minute: 106,
+      teamId: "germany",
+      playerId: "fifa-411367",
+      cardType: "yellow",
+    });
+    expectCard("match-79-card-3").toMatchObject({
+      minute: 90,
+      stoppageMinute: 5,
+      teamId: "ecuador",
+      playerId: "fifa-424031",
+      cardType: "red",
+    });
+    expectCard("match-100-card-1").toMatchObject({
+      minute: 44,
+      teamId: "switzerland",
+      playerId: "fifa-393480",
+      cardType: "yellow",
+    });
+    expectCard("match-100-card-2").toMatchObject({
+      minute: 72,
+      teamId: "switzerland",
+      playerId: "fifa-393480",
+      cardType: "second_yellow",
+    });
+  });
+
+  it("keeps mixed knockout events in chronological sequence", () => {
+    for (let matchNumber = 73; matchNumber <= 104; matchNumber += 1) {
+      const events = fifaWorldCup2026Snapshot.matchEvents.filter(
+        (event) => event.matchId === `match-${matchNumber}`,
+      );
+
+      expect(events.map((event) => event.sequence)).toEqual(
+        Array.from({ length: events.length }, (_, index) => index + 1),
+      );
+
+      for (let index = 1; index < events.length; index += 1) {
+        expect(eventTime(events[index])).toBeGreaterThanOrEqual(
+          eventTime(events[index - 1]),
+        );
+      }
+    }
+  });
+
   it("excludes penalty-shootout kicks from match events", () => {
     expect(
       fifaWorldCup2026Snapshot.matchEvents.filter(
-        (event) => event.matchId === "match-74",
+        (event) => event.matchId === "match-74" && event.type === "goal",
       ),
     ).toHaveLength(2);
     expect(
       fifaWorldCup2026Snapshot.matchEvents.filter(
-        (event) => event.matchId === "match-96",
+        (event) => event.matchId === "match-96" && event.type === "goal",
       ),
     ).toHaveLength(0);
   });
@@ -251,4 +312,18 @@ function expectGoal(eventId: string) {
   expect(event).toBeDefined();
   expect(event?.type).toBe("goal");
   return expect(event);
+}
+
+function expectCard(eventId: string) {
+  const event = fifaWorldCup2026Snapshot.matchEvents.find(
+    (candidate) => candidate.id === eventId,
+  );
+
+  expect(event).toBeDefined();
+  expect(event?.type).toBe("card");
+  return expect(event);
+}
+
+function eventTime(event: { minute: number; stoppageMinute?: number }) {
+  return event.minute + (event.stoppageMinute ?? 0) / 100;
 }
