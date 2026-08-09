@@ -11,6 +11,8 @@ import type {
   TeamSheetPlayerRole,
 } from "@/domain/tournament/types";
 
+import { TeamFlag } from "./team-flag";
+
 type TeamSheetOption = Readonly<{
   team: Team;
   teamSheet: MatchTeamSheet;
@@ -74,6 +76,7 @@ export function MatchTeamSheetView({
 
             return (
               <button
+                aria-label={`${team.name} · ${teamSheet.formation}`}
                 aria-pressed={isSelected}
                 className={`rounded-xl px-3 py-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${isSelected ? "bg-highlight text-stadium shadow-lg shadow-black/20" : "text-secondary hover:bg-surface hover:text-foreground"}`}
                 key={team.id}
@@ -83,11 +86,22 @@ export function MatchTeamSheetView({
                 }}
                 type="button"
               >
-                <span className="block text-xs font-bold uppercase tracking-[0.14em]">
-                  {team.code}
-                </span>
-                <span className="mt-1 block text-sm font-semibold">
-                  {team.name} · {teamSheet.formation}
+                <span className="flex items-center gap-3">
+                  <TeamFlag
+                    highlighted={isSelected}
+                    size="small"
+                    team={team}
+                  />
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-semibold">
+                      {team.name}
+                    </span>
+                    <span
+                      className={`mt-1 block text-xs font-bold uppercase tracking-[0.12em] ${isSelected ? "text-stadium/70" : "text-secondary"}`}
+                    >
+                      {teamSheet.formation}
+                    </span>
+                  </span>
                 </span>
               </button>
             );
@@ -135,9 +149,7 @@ function TeamSheetCard({
     <article className="mt-5 overflow-hidden rounded-3xl border border-line bg-stadium/45">
       <header className="flex flex-wrap items-start justify-between gap-4 border-b border-line px-5 py-5">
         <div className="flex items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-full border border-highlight/45 bg-highlight/10 text-xs font-black text-highlight">
-            {team.code}
-          </span>
+          <TeamFlag size="medium" team={team} />
           <div>
             <h3 className="font-semibold">{team.name}</h3>
             <p className="mt-1 text-sm text-secondary">

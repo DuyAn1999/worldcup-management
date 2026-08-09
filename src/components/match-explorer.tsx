@@ -18,6 +18,7 @@ import type {
 } from "@/domain/tournament/types";
 
 import { MatchTeamSheetView } from "./match-team-sheet";
+import { TeamFlag } from "./team-flag";
 
 type StageFilter = "all" | MatchStage;
 type MatchDetailsTab = "overview" | "lineups";
@@ -576,11 +577,7 @@ function DetailTeam({
 }: Readonly<{ isWinner: boolean; team: TeamType }>) {
   return (
     <div className="flex min-w-0 flex-col items-center">
-      <span
-        className={`grid size-12 place-items-center rounded-full border text-xs font-bold tracking-wide ${isWinner ? "border-highlight bg-highlight text-stadium shadow-[0_0_20px_color-mix(in_oklch,var(--highlight)_25%,transparent)]" : "border-line bg-surface text-highlight"}`}
-      >
-        {team.code}
-      </span>
+      <TeamFlag highlighted={isWinner} size="large" team={team} />
       <p
         className={`mt-3 text-sm font-semibold leading-5 sm:text-base ${isWinner ? "text-highlight" : ""}`}
       >
@@ -626,11 +623,7 @@ function Team({
 }>) {
   return (
     <div className="flex min-w-0 items-center gap-3">
-      <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full border text-[0.65rem] font-bold tracking-wide transition ${isWinner ? "border-highlight bg-highlight text-stadium shadow-[0_0_16px_color-mix(in_oklch,var(--highlight)_25%,transparent)]" : "border-line bg-stadium text-highlight"}`}
-      >
-        {team.code}
-      </span>
+      <TeamFlag highlighted={isWinner} size="small" team={team} />
       <span
         className={`truncate font-semibold ${isWinner ? "text-highlight" : ""}`}
       >

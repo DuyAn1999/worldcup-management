@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: "digitalhub.fifa.com",
         pathname: "/transform/**",
       },
+      {
+        protocol: "https",
+        hostname: "api.fifa.com",
+        pathname: "/api/v3/picture/flags-sq-4/*",
+      },
     ],
   },
   reactStrictMode: true,

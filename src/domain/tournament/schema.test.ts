@@ -194,6 +194,24 @@ describe("parseTournamentSnapshot", () => {
     );
   });
 
+  it("accepts an optional HTTPS team image URL", () => {
+    const snapshot = createValidSnapshot();
+    const result = parseTournamentSnapshot({
+      ...snapshot,
+      teams: [
+        {
+          ...snapshot.teams[0],
+          imageUrl: "https://api.fifa.com/api/v3/picture/flags-sq-4/MEX",
+        },
+        ...snapshot.teams.slice(1),
+      ],
+    });
+
+    expect(result.teams[0].imageUrl).toBe(
+      "https://api.fifa.com/api/v3/picture/flags-sq-4/MEX",
+    );
+  });
+
   it("rejects a player image URL that does not use HTTPS", () => {
     const snapshot = createValidSnapshot();
     const result = safeParseTournamentSnapshot({
@@ -204,6 +222,22 @@ describe("parseTournamentSnapshot", () => {
           imageUrl: "http://example.com/player.jpg",
         },
         ...snapshot.players.slice(1),
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a team image URL that does not use HTTPS", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      teams: [
+        {
+          ...snapshot.teams[0],
+          imageUrl: "http://example.com/team.png",
+        },
+        ...snapshot.teams.slice(1),
       ],
     });
 

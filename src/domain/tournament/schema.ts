@@ -64,6 +64,7 @@ export const teamSchema = z
     shortName: z.string().trim().min(1).max(40),
     code: z.string().trim().min(2).max(10),
     countryCode: countryCodeSchema.optional(),
+    imageUrl: httpsUrlSchema.optional(),
   })
   .strict();
 

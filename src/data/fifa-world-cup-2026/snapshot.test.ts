@@ -25,6 +25,28 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     ).toBe(true);
   });
 
+  it("contains official FIFA flags for all 48 teams", () => {
+    expect(
+      fifaWorldCup2026Snapshot.teams.every(
+        (team) =>
+          team.imageUrl ===
+          `https://api.fifa.com/api/v3/picture/flags-sq-4/${team.code}`,
+      ),
+    ).toBe(true);
+    expect(
+      fifaWorldCup2026Snapshot.teams.find((team) => team.id === "england"),
+    ).toMatchObject({
+      countryCode: "GB",
+      imageUrl: "https://api.fifa.com/api/v3/picture/flags-sq-4/ENG",
+    });
+    expect(
+      fifaWorldCup2026Snapshot.teams.find((team) => team.id === "scotland"),
+    ).toMatchObject({
+      countryCode: "GB",
+      imageUrl: "https://api.fifa.com/api/v3/picture/flags-sq-4/SCO",
+    });
+  });
+
   it("contains the verified Match 104 team sheets", () => {
     const spain = fifaWorldCup2026Snapshot.teamSheets.find(
       (teamSheet) => teamSheet.teamId === "spain",

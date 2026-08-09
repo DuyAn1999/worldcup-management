@@ -68,6 +68,7 @@ export interface Team {
   readonly shortName: string;
   readonly code: string;
   readonly countryCode?: string;
+  readonly imageUrl?: string;
 }
 
 export interface Player {

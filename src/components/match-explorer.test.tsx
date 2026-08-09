@@ -17,6 +17,14 @@ describe("MatchExplorer", () => {
       "text-highlight",
     );
     expect(within(openingMatch).getByText("Winner")).toBeInTheDocument();
+    expect(
+      [...openingMatch.querySelectorAll("img")].map((image) =>
+        image.getAttribute("src"),
+      ),
+    ).toEqual([
+      expect.stringContaining("flags-sq-4%2FMEX"),
+      expect.stringContaining("flags-sq-4%2FRSA"),
+    ]);
 
     const drawnMatch = getMatchCard(3);
     expect(within(drawnMatch).queryByText("Winner")).not.toBeInTheDocument();
@@ -90,6 +98,7 @@ describe("MatchExplorer", () => {
     expect(openingMatchButton).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText("Mexico City Stadium")).toBeInTheDocument();
     expect(within(dialog).getByText("Mexico City, MX")).toBeInTheDocument();
+    expect(dialog.querySelectorAll('img[src*="flags-sq-4"]').length).toBe(2);
 
     const closeButton = within(dialog).getByRole("button", {
       name: "Close match details",
