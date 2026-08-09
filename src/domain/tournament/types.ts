@@ -74,6 +74,7 @@ export interface Player {
   readonly id: PlayerId;
   readonly teamId: TeamId;
   readonly name: string;
+  readonly imageUrl?: string;
 }
 
 export const teamSheetPlayerRoles = [

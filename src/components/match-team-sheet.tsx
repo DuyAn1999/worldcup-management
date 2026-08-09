@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 
 import type {
@@ -163,9 +164,11 @@ function TeamSheetCard({
         >
           {selectedPlayer && selectedListedPlayer ? (
             <div className="flex items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-highlight font-bold text-stadium">
-                {selectedListedPlayer.shirtNumber}
-              </span>
+              <PlayerAvatar
+                player={selectedPlayer}
+                shirtNumber={selectedListedPlayer.shirtNumber}
+                size="detail"
+              />
               <div>
                 <p className="font-semibold">{selectedPlayer.name}</p>
                 <p className="mt-0.5 text-xs uppercase tracking-[0.12em] text-secondary">
@@ -277,12 +280,13 @@ function FormationRow({
             onClick={() => onSelectPlayer(listedPlayer.playerId)}
             type="button"
           >
-            <span
-              className={`grid size-9 place-items-center rounded-full border text-xs font-black shadow-lg shadow-black/25 transition group-hover:-translate-y-0.5 group-focus-visible:ring-2 group-focus-visible:ring-highlight group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-stadium sm:size-10 ${isSelected ? "border-highlight bg-highlight text-stadium" : "border-foreground/50 bg-surface-raised text-foreground"}`}
-            >
-              {listedPlayer.shirtNumber}
-            </span>
-            <span className="mt-1.5 max-w-full truncate rounded bg-stadium/85 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide text-foreground sm:text-[0.65rem]">
+            <PlayerAvatar
+              isSelected={isSelected}
+              player={player}
+              shirtNumber={listedPlayer.shirtNumber}
+              size="pitch"
+            />
+            <span className="mt-2 max-w-full truncate rounded bg-stadium/85 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide text-foreground sm:text-[0.65rem]">
               {getShortName(player?.name)}
             </span>
           </button>
@@ -310,9 +314,12 @@ function PlayerListButton({
       onClick={() => onSelectPlayer(listedPlayer.playerId)}
       type="button"
     >
-      <span className="grid size-8 shrink-0 place-items-center rounded-full border border-line bg-stadium text-xs font-bold text-highlight">
-        {listedPlayer.shirtNumber}
-      </span>
+      <PlayerAvatar
+        isSelected={isSelected}
+        player={player}
+        shirtNumber={listedPlayer.shirtNumber}
+        size="list"
+      />
       <span className="min-w-0">
         <span className="block truncate text-sm font-medium">
           {player?.name ?? "Unknown player"}
@@ -322,6 +329,62 @@ function PlayerListButton({
         </span>
       </span>
     </button>
+  );
+}
+
+type PlayerAvatarSize = "pitch" | "list" | "detail";
+
+const playerAvatarSizeClasses: Record<PlayerAvatarSize, string> = {
+  pitch: "size-10 sm:size-11",
+  list: "size-10",
+  detail: "size-12",
+};
+
+function PlayerAvatar({
+  isSelected = false,
+  player,
+  shirtNumber,
+  size,
+}: Readonly<{
+  isSelected?: boolean;
+  player: Player | undefined;
+  shirtNumber: number;
+  size: PlayerAvatarSize;
+}>) {
+  const [failedImageUrl, setFailedImageUrl] = useState<string>();
+  const imageUrl = player?.imageUrl;
+  const showImage = imageUrl !== undefined && imageUrl !== failedImageUrl;
+
+  return (
+    <span
+      className={`relative grid shrink-0 place-items-center rounded-full border bg-surface-raised font-black shadow-lg shadow-black/25 transition group-hover:-translate-y-0.5 ${playerAvatarSizeClasses[size]} ${isSelected ? "border-highlight ring-2 ring-highlight/55" : "border-foreground/50"}`}
+    >
+      <span className="absolute inset-0 overflow-hidden rounded-full">
+        {showImage ? (
+          <Image
+            alt=""
+            className="object-cover object-top"
+            fill
+            onError={() => setFailedImageUrl(imageUrl)}
+            sizes={size === "detail" ? "48px" : "44px"}
+            src={imageUrl}
+          />
+        ) : (
+          <span
+            aria-hidden="true"
+            className="grid size-full place-items-center bg-highlight/15 text-[0.65rem] text-highlight"
+          >
+            {getPlayerInitials(player?.name)}
+          </span>
+        )}
+      </span>
+      <span
+        aria-hidden="true"
+        className="absolute -bottom-1 -right-1 grid size-5 place-items-center rounded-full border border-stadium bg-highlight text-[0.58rem] font-black text-stadium shadow-md shadow-black/30"
+      >
+        {shirtNumber}
+      </span>
+    </span>
   );
 }
 
@@ -341,6 +404,18 @@ function buildFormationRows(teamSheet: MatchTeamSheet) {
 
 function getShortName(name: string | undefined) {
   return name?.trim().split(/\s+/).at(-1) ?? "TBC";
+}
+
+function getPlayerInitials(name: string | undefined) {
+  if (!name) {
+    return "?";
+  }
+
+  const parts = name.trim().split(/\s+/);
+  const firstInitial = parts[0]?.charAt(0) ?? "";
+  const lastInitial = parts.at(-1)?.charAt(0) ?? "";
+
+  return `${firstInitial}${parts.length > 1 ? lastInitial : ""}`.toUpperCase();
 }
 
 function formatRole(role: TeamSheetPlayerRole) {

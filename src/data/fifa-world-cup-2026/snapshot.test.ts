@@ -62,6 +62,35 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     );
   });
 
+  it("contains official portraits for every Match 104 player", () => {
+    const finalPlayerIds = new Set(
+      fifaWorldCup2026Snapshot.teamSheets.flatMap((teamSheet) => [
+        ...teamSheet.starters.map((player) => player.playerId),
+        ...teamSheet.substitutes.map((player) => player.playerId),
+      ]),
+    );
+    const finalPlayers = fifaWorldCup2026Snapshot.players.filter((player) =>
+      finalPlayerIds.has(player.id),
+    );
+
+    expect(finalPlayerIds.size).toBe(52);
+    expect(finalPlayers).toHaveLength(52);
+    expect(
+      finalPlayers.every((player) =>
+        player.imageUrl?.startsWith(
+          "https://digitalhub.fifa.com/transform/",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      finalPlayers.find((player) => player.id === "fifa-430753"),
+    ).toMatchObject({
+      name: "Unai SIMON",
+      imageUrl:
+        "https://digitalhub.fifa.com/transform/41e0f920-bd7d-4bd6-882b-c83ed33e3f26/SIMON-Unai_430753",
+    });
+  });
+
   it("attributes every knockout goal to the verified final score", () => {
     for (let matchNumber = 73; matchNumber <= 104; matchNumber += 1) {
       const match = findMatch(matchNumber);

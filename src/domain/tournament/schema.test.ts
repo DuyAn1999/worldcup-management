@@ -175,6 +175,41 @@ describe("parseTournamentSnapshot", () => {
     expect(parseTournamentSnapshot(snapshot)).toEqual(snapshot);
   });
 
+  it("accepts an optional HTTPS player image URL", () => {
+    const snapshot = createValidSnapshot();
+    const result = parseTournamentSnapshot({
+      ...snapshot,
+      players: [
+        {
+          ...snapshot.players[0],
+          imageUrl:
+            "https://digitalhub.fifa.com/transform/player-id/player-name",
+        },
+        ...snapshot.players.slice(1),
+      ],
+    });
+
+    expect(result.players[0].imageUrl).toBe(
+      "https://digitalhub.fifa.com/transform/player-id/player-name",
+    );
+  });
+
+  it("rejects a player image URL that does not use HTTPS", () => {
+    const snapshot = createValidSnapshot();
+    const result = safeParseTournamentSnapshot({
+      ...snapshot,
+      players: [
+        {
+          ...snapshot.players[0],
+          imageUrl: "http://example.com/player.jpg",
+        },
+        ...snapshot.players.slice(1),
+      ],
+    });
+
+    expect(result.success).toBe(false);
+  });
+
   it("rejects duplicate entity ids", () => {
     const snapshot = createValidSnapshot();
     const result = safeParseTournamentSnapshot({

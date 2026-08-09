@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -156,17 +156,15 @@ describe("MatchExplorer", () => {
     expect(
       within(dialog).getByText(/Luis de la Fuente Castillo/),
     ).toBeInTheDocument();
-    expect(
-      within(dialog).getByRole("button", {
-        name: "Unai SIMON, number 23, Goalkeeper",
-      }),
-    ).toBeInTheDocument();
-
-    await user.click(
-      within(dialog).getByRole("button", {
-        name: "Unai SIMON, number 23, Goalkeeper",
-      }),
+    const unaiMarker = within(dialog).getByRole("button", {
+      name: "Unai SIMON, number 23, Goalkeeper",
+    });
+    const unaiPortrait = unaiMarker.querySelector("img");
+    expect(unaiPortrait?.getAttribute("src")).toContain(
+      "SIMON-Unai_430753",
     );
+
+    await user.click(unaiMarker);
     expect(within(dialog).getByText("Starting XI · Goalkeeper")).toBeInTheDocument();
 
     await user.click(within(dialog).getByText("Substitutes"));
@@ -184,6 +182,32 @@ describe("MatchExplorer", () => {
         name: "Lionel MESSI, number 10, Forward",
       }),
     ).toBeInTheDocument();
+  });
+
+  it("falls back to player initials when an official portrait fails", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Final" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 104: Spain versus Argentina",
+      }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "Match 104 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    const unaiMarker = within(dialog).getByRole("button", {
+      name: "Unai SIMON, number 23, Goalkeeper",
+    });
+    const unaiPortrait = unaiMarker.querySelector("img");
+    expect(unaiPortrait).not.toBeNull();
+
+    fireEvent.error(unaiPortrait as HTMLImageElement);
+
+    expect(unaiMarker.querySelector("img")).toBeNull();
+    expect(within(unaiMarker).getByText("US")).toBeInTheDocument();
+    expect(within(unaiMarker).getByText("23")).toBeInTheDocument();
   });
 
   it("shows a lineup fallback for matches without imported team sheets", async () => {

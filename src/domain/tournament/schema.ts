@@ -17,6 +17,11 @@ import {
 const entityIdSchema = z.string().trim().min(1).max(100);
 const isoDateTimeSchema = z.iso.datetime({ offset: true });
 const countryCodeSchema = z.string().regex(/^[A-Z]{2}$/);
+const httpsUrlSchema = z
+  .url()
+  .refine((url) => new URL(url).protocol === "https:", {
+    message: "URL must use HTTPS",
+  });
 
 const timeZoneSchema = z.string().trim().min(1).refine(
   (timeZone) => {
@@ -67,6 +72,7 @@ export const playerSchema = z
     id: entityIdSchema,
     teamId: entityIdSchema,
     name: z.string().trim().min(1).max(120),
+    imageUrl: httpsUrlSchema.optional(),
   })
   .strict();
 
