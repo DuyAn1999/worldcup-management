@@ -15,8 +15,8 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(fifaWorldCup2026Snapshot.groups).toHaveLength(12);
     expect(fifaWorldCup2026Snapshot.venues).toHaveLength(16);
     expect(fifaWorldCup2026Snapshot.matches).toHaveLength(104);
-    expect(fifaWorldCup2026Snapshot.players).toHaveLength(193);
-    expect(fifaWorldCup2026Snapshot.teamSheets).toHaveLength(8);
+    expect(fifaWorldCup2026Snapshot.players).toHaveLength(439);
+    expect(fifaWorldCup2026Snapshot.teamSheets).toHaveLength(32);
     expect(fifaWorldCup2026Snapshot.matchEvents).toHaveLength(188);
     expect(
       fifaWorldCup2026Snapshot.groups.every(
@@ -84,6 +84,382 @@ describe("FIFA World Cup 2026 static snapshot", () => {
     expect(argentina?.starters).toContainEqual(
       expect.objectContaining({ playerId: "fifa-229397", shirtNumber: 10 }),
     );
+  });
+
+  it("contains the verified Match 89-92 team sheets", () => {
+    const expectedTeamSheets = [
+      {
+        matchId: "match-89",
+        teamId: "paraguay",
+        formation: "5-4-1",
+        coachId: "fifa-428890",
+        coachName: "Gustavo ALFARO",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-89",
+        teamId: "france",
+        formation: "4-2-3-1",
+        coachId: "fifa-48455",
+        coachName: "Didier Deschamps",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-90",
+        teamId: "canada",
+        formation: "4-4-2",
+        coachId: "fifa-187150",
+        coachName: "Jesse Alan Marsch",
+        substitutes: 14,
+      },
+      {
+        matchId: "match-90",
+        teamId: "morocco",
+        formation: "4-2-3-1",
+        coachId: "fifa-496329",
+        coachName: "Mohamed OUAHBI",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-91",
+        teamId: "brazil",
+        formation: "4-1-2-3",
+        coachId: "fifa-174348",
+        coachName: "Carlo Ancelotti",
+        substitutes: 14,
+      },
+      {
+        matchId: "match-91",
+        teamId: "norway",
+        formation: "4-1-2-3",
+        coachId: "fifa-157000",
+        coachName: "Ståle Solbakken",
+        substitutes: 14,
+      },
+      {
+        matchId: "match-92",
+        teamId: "mexico",
+        formation: "4-1-2-3",
+        coachId: "fifa-45078",
+        coachName: "Javier Aguirre Onaindía",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-92",
+        teamId: "england",
+        formation: "4-2-3-1",
+        coachId: "fifa-165190",
+        coachName: "Thomas Tuchel",
+        substitutes: 15,
+      },
+    ] as const;
+
+    for (const expected of expectedTeamSheets) {
+      const teamSheet = fifaWorldCup2026Snapshot.teamSheets.find(
+        (candidate) =>
+          candidate.matchId === expected.matchId &&
+          candidate.teamId === expected.teamId,
+      );
+
+      expect(teamSheet).toMatchObject({
+        matchId: expected.matchId,
+        teamId: expected.teamId,
+        formation: expected.formation,
+        headCoach: {
+          id: expected.coachId,
+          name: expected.coachName,
+        },
+      });
+      expect(teamSheet?.starters).toHaveLength(11);
+      expect(teamSheet?.substitutes).toHaveLength(expected.substitutes);
+    }
+  });
+
+  it("uses verified portraits or safe fallbacks for Match 89-92 players", () => {
+    const scopedPlayerIds = new Set(
+      fifaWorldCup2026Snapshot.teamSheets
+        .filter((teamSheet) =>
+          ["match-89", "match-90", "match-91", "match-92"].includes(
+            teamSheet.matchId,
+          ),
+        )
+        .flatMap((teamSheet) => [
+          ...teamSheet.starters.map((player) => player.playerId),
+          ...teamSheet.substitutes.map((player) => player.playerId),
+        ]),
+    );
+    const scopedPlayers = fifaWorldCup2026Snapshot.players.filter((player) =>
+      scopedPlayerIds.has(player.id),
+    );
+    const playersWithPortraits = scopedPlayers.filter((player) =>
+      player.imageUrl?.startsWith("https://digitalhub.fifa.com/transform/"),
+    );
+
+    expect(scopedPlayerIds.size).toBe(205);
+    expect(scopedPlayers).toHaveLength(205);
+    expect(playersWithPortraits).toHaveLength(203);
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-308370"),
+    ).toMatchObject({
+      name: "ALISSON",
+      imageUrl:
+        "https://digitalhub.fifa.com/transform/6b051628-d407-41ce-8a60-dc354ac4ccb8/ALISSON_308370",
+    });
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-448196"),
+    ).not.toHaveProperty("imageUrl");
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-463780"),
+    ).not.toHaveProperty("imageUrl");
+  });
+
+  it("contains the verified Match 93-96 team sheets", () => {
+    const expectedTeamSheets = [
+      {
+        matchId: "match-93",
+        teamId: "portugal",
+        formation: "4-2-3-1",
+        coachId: "fifa-396423",
+        coachName: "Roberto Martínez Montoliú",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-93",
+        teamId: "spain",
+        formation: "4-1-2-3",
+        coachId: "fifa-430724",
+        coachName: "Luis de la Fuente Castillo",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-94",
+        teamId: "usa",
+        formation: "3-5-2",
+        coachId: "fifa-3075",
+        coachName: "Mauricio POCHETTINO",
+        substitutes: 14,
+      },
+      {
+        matchId: "match-94",
+        teamId: "belgium",
+        formation: "4-2-3-1",
+        coachId: "fifa-344378",
+        coachName: "Rudi Garcia",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-95",
+        teamId: "argentina",
+        formation: "4-1-3-2",
+        coachId: "fifa-183380",
+        coachName: "Lionel SCALONI",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-95",
+        teamId: "egypt",
+        formation: "4-2-3-1",
+        coachId: "fifa-174595",
+        coachName: "Hossam Hassan Hussein",
+        substitutes: 13,
+      },
+      {
+        matchId: "match-96",
+        teamId: "switzerland",
+        formation: "4-1-2-3",
+        coachId: "fifa-157842",
+        coachName: "Murat Yakin",
+        substitutes: 12,
+      },
+      {
+        matchId: "match-96",
+        teamId: "colombia",
+        formation: "4-1-2-3",
+        coachId: "fifa-44325",
+        coachName: "Néstor Gabriel Lorenzo",
+        substitutes: 15,
+      },
+    ] as const;
+
+    for (const expected of expectedTeamSheets) {
+      const teamSheet = fifaWorldCup2026Snapshot.teamSheets.find(
+        (candidate) =>
+          candidate.matchId === expected.matchId &&
+          candidate.teamId === expected.teamId,
+      );
+
+      expect(teamSheet).toMatchObject({
+        matchId: expected.matchId,
+        teamId: expected.teamId,
+        formation: expected.formation,
+        headCoach: {
+          id: expected.coachId,
+          name: expected.coachName,
+        },
+      });
+      expect(teamSheet?.starters).toHaveLength(11);
+      expect(teamSheet?.substitutes).toHaveLength(expected.substitutes);
+    }
+  });
+
+  it("contains verified portraits for every Match 93-96 player", () => {
+    const scopedPlayerIds = new Set(
+      fifaWorldCup2026Snapshot.teamSheets
+        .filter((teamSheet) =>
+          ["match-93", "match-94", "match-95", "match-96"].includes(
+            teamSheet.matchId,
+          ),
+        )
+        .flatMap((teamSheet) => [
+          ...teamSheet.starters.map((player) => player.playerId),
+          ...teamSheet.substitutes.map((player) => player.playerId),
+        ]),
+    );
+    const scopedPlayers = fifaWorldCup2026Snapshot.players.filter((player) =>
+      scopedPlayerIds.has(player.id),
+    );
+
+    expect(scopedPlayerIds.size).toBe(202);
+    expect(scopedPlayers).toHaveLength(202);
+    expect(
+      scopedPlayers.every((player) =>
+        player.imageUrl?.startsWith("https://digitalhub.fifa.com/transform/"),
+      ),
+    ).toBe(true);
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-499913"),
+    ).toMatchObject({
+      name: "Matt FREESE",
+      imageUrl:
+        "https://digitalhub.fifa.com/transform/c46f695b-3acc-4360-abf4-3110ff60d86e/FREESE-Matt_499913",
+    });
+  });
+
+  it("contains the verified Match 97-100 team sheets", () => {
+    const expectedTeamSheets = [
+      {
+        matchId: "match-97",
+        teamId: "france",
+        formation: "4-2-3-1",
+        coachId: "fifa-48455",
+        coachName: "Didier Deschamps",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-97",
+        teamId: "morocco",
+        formation: "4-2-3-1",
+        coachId: "fifa-496329",
+        coachName: "Mohamed OUAHBI",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-98",
+        teamId: "spain",
+        formation: "4-2-3-1",
+        coachId: "fifa-430724",
+        coachName: "Luis de la Fuente Castillo",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-98",
+        teamId: "belgium",
+        formation: "4-2-3-1",
+        coachId: "fifa-344378",
+        coachName: "Rudi Garcia",
+        substitutes: 12,
+      },
+      {
+        matchId: "match-99",
+        teamId: "norway",
+        formation: "4-1-2-3",
+        coachId: "fifa-157000",
+        coachName: "Ståle Solbakken",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-99",
+        teamId: "england",
+        formation: "4-2-3-1",
+        coachId: "fifa-165190",
+        coachName: "Thomas Tuchel",
+        substitutes: 14,
+      },
+      {
+        matchId: "match-100",
+        teamId: "argentina",
+        formation: "4-1-3-2",
+        coachId: "fifa-183380",
+        coachName: "Lionel SCALONI",
+        substitutes: 15,
+      },
+      {
+        matchId: "match-100",
+        teamId: "switzerland",
+        formation: "4-2-3-1",
+        coachId: "fifa-157842",
+        coachName: "Murat Yakin",
+        substitutes: 14,
+      },
+    ] as const;
+
+    for (const expected of expectedTeamSheets) {
+      const teamSheet = fifaWorldCup2026Snapshot.teamSheets.find(
+        (candidate) =>
+          candidate.matchId === expected.matchId &&
+          candidate.teamId === expected.teamId,
+      );
+
+      expect(teamSheet).toMatchObject({
+        matchId: expected.matchId,
+        teamId: expected.teamId,
+        formation: expected.formation,
+        headCoach: {
+          id: expected.coachId,
+          name: expected.coachName,
+        },
+      });
+      expect(teamSheet?.starters).toHaveLength(11);
+      expect(teamSheet?.substitutes).toHaveLength(expected.substitutes);
+    }
+  });
+
+  it("uses verified portraits or safe fallbacks for Match 97-100 players", () => {
+    const scopedPlayerIds = new Set(
+      fifaWorldCup2026Snapshot.teamSheets
+        .filter((teamSheet) =>
+          ["match-97", "match-98", "match-99", "match-100"].includes(
+            teamSheet.matchId,
+          ),
+        )
+        .flatMap((teamSheet) => [
+          ...teamSheet.starters.map((player) => player.playerId),
+          ...teamSheet.substitutes.map((player) => player.playerId),
+        ]),
+    );
+    const scopedPlayers = fifaWorldCup2026Snapshot.players.filter((player) =>
+      scopedPlayerIds.has(player.id),
+    );
+    const playersWithPortraits = scopedPlayers.filter((player) =>
+      player.imageUrl?.startsWith("https://digitalhub.fifa.com/transform/"),
+    );
+
+    expect(scopedPlayerIds.size).toBe(203);
+    expect(scopedPlayers).toHaveLength(203);
+    expect(playersWithPortraits).toHaveLength(201);
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-510908"),
+    ).toMatchObject({
+      name: "Luca JAQUEZ",
+      imageUrl:
+        "https://digitalhub.fifa.com/transform/2f3d611d-71c6-40ac-bc76-fdad78fe3c5e/JAQUEZ-Luca_510908",
+    });
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-448196"),
+    ).not.toHaveProperty("imageUrl");
+    expect(
+      scopedPlayers.find((player) => player.id === "fifa-463780"),
+    ).not.toHaveProperty("imageUrl");
   });
 
   it("contains the verified Match 101-103 team sheets", () => {

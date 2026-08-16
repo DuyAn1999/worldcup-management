@@ -193,6 +193,152 @@ describe("MatchExplorer", () => {
     ).toBeInTheDocument();
   });
 
+  it("explores Match 89-92 team sheets and portrait fallbacks", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Round of 16" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 90: Canada versus Morocco",
+      }),
+    );
+
+    let dialog = screen.getByRole("dialog", { name: "Match 90 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(within(dialog).getByText(/Jesse Alan Marsch/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Canada · 4-4-2" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const maximeCrepeau = within(dialog).getByRole("button", {
+      name: "Maxime CREPEAU, number 16, Goalkeeper",
+    });
+    expect(maximeCrepeau.querySelector("img")?.getAttribute("src")).toContain(
+      "CREPEAU-Maxime_331732",
+    );
+
+    const substituteSummary = within(dialog)
+      .getByText("Substitutes")
+      .closest("summary");
+    expect(substituteSummary?.querySelector("span:last-child")).toHaveTextContent(
+      "14",
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Morocco · 4-2-3-1" }),
+    );
+    expect(within(dialog).getByText(/Mohamed OUAHBI/)).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 92: Mexico versus England",
+      }),
+    );
+
+    dialog = screen.getByRole("dialog", { name: "Match 92 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "England · 4-2-3-1" }),
+    );
+
+    const bukayoSaka = within(dialog).getByRole("button", {
+      name: "Bukayo SAKA, number 7, Forward",
+    });
+    const nicoOreilly = within(dialog).getByRole("button", {
+      name: "Nico OREILLY, number 3, Defender",
+    });
+    expect(bukayoSaka.querySelector("img")).toBeNull();
+    expect(within(bukayoSaka).getByText("BS")).toBeInTheDocument();
+    expect(nicoOreilly.querySelector("img")).toBeNull();
+    expect(within(nicoOreilly).getByText("NO")).toBeInTheDocument();
+  });
+
+  it("explores Match 93-96 team sheets and smaller official benches", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Round of 16" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 96: Switzerland versus Colombia",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Match 96 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(within(dialog).getByText(/Murat Yakin/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Switzerland · 4-1-2-3" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const gregorKobel = within(dialog).getByRole("button", {
+      name: "Gregor KOBEL, number 1, Goalkeeper",
+    });
+    expect(gregorKobel.querySelector("img")?.getAttribute("src")).toContain(
+      "KOBEL-Gregor_448107",
+    );
+
+    const substituteSummary = within(dialog)
+      .getByText("Substitutes")
+      .closest("summary");
+    expect(substituteSummary?.querySelector("span:last-child")).toHaveTextContent(
+      "12",
+    );
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Colombia · 4-1-2-3" }),
+    );
+    expect(
+      within(dialog).getByText(/Néstor Gabriel Lorenzo/),
+    ).toBeInTheDocument();
+  });
+
+  it("explores quarterfinal team sheets and official roster changes", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Quarter-finals" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 100: Argentina versus Switzerland",
+      }),
+    );
+
+    const dialog = screen.getByRole("dialog", { name: "Match 100 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(within(dialog).getByText(/Lionel SCALONI/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "Argentina · 4-1-3-2" }),
+    ).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Switzerland · 4-2-3-1" }),
+    );
+    expect(within(dialog).getByText(/Murat Yakin/)).toBeInTheDocument();
+
+    const substituteSummary = within(dialog)
+      .getByText("Substitutes")
+      .closest("summary");
+    expect(substituteSummary?.querySelector("span:last-child")).toHaveTextContent(
+      "14",
+    );
+
+    await user.click(substituteSummary as HTMLElement);
+    const lucaJaquez = within(dialog).getByRole("button", {
+      name: /Luca JAQUEZ/,
+    });
+    expect(lucaJaquez.querySelector("img")?.getAttribute("src")).toContain(
+      "JAQUEZ-Luca_510908",
+    );
+    await user.click(lucaJaquez);
+    expect(
+      within(dialog).getByText("Substitute · Defender"),
+    ).toBeInTheDocument();
+  });
+
   it("explores semifinal and third-place team sheets", async () => {
     const user = userEvent.setup();
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
