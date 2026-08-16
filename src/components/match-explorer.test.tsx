@@ -143,6 +143,49 @@ describe("MatchExplorer", () => {
     ).toBeInTheDocument();
   });
 
+  it("explores the knockout event road and preserves the no-data state", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Final" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 104: Spain versus Argentina",
+      }),
+    );
+
+    let dialog = screen.getByRole("dialog", { name: "Match 104 details" });
+    const eventsTab = within(dialog).getByRole("tab", { name: "Events" });
+    await user.click(eventsTab);
+
+    expect(eventsTab).toHaveAttribute("aria-selected", "true");
+    expect(
+      within(dialog).getByRole("list", { name: "Chronological match events" }),
+    ).toBeInTheDocument();
+    expect(within(dialog).getAllByRole("listitem")).toHaveLength(7);
+    expect(
+      within(dialog).getByLabelText("106′: Ferran TORRES, Goal, Spain"),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByLabelText("106′, extra time")).toBeInTheDocument();
+    expect(
+      within(dialog).getByLabelText(
+        "90+3′: Enzo FERNANDEZ, Second yellow · Red card, Argentina",
+      ),
+    ).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "All matches" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 1: Mexico versus South Africa",
+      }),
+    );
+
+    dialog = screen.getByRole("dialog", { name: "Match 1 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Events" }));
+    expect(within(dialog).getByText("Events not available")).toBeInTheDocument();
+  });
+
   it("explores the final formations, players, and substitutes", async () => {
     const user = userEvent.setup();
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);

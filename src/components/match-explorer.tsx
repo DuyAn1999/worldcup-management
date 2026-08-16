@@ -17,11 +17,12 @@ import type {
   Venue,
 } from "@/domain/tournament/types";
 
+import { MatchEventTimeline } from "./match-event-timeline";
 import { MatchTeamSheetView } from "./match-team-sheet";
 import { TeamFlag } from "./team-flag";
 
 type StageFilter = "all" | MatchStage;
-type MatchDetailsTab = "overview" | "lineups";
+type MatchDetailsTab = "overview" | "events" | "lineups";
 
 const stageOptions: readonly {
   value: StageFilter;
@@ -112,6 +113,11 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
             teamSheet.teamId === selectedAwayTeam.id,
         )
       : undefined;
+  const selectedMatchEvents = selectedMatch
+    ? snapshot.matchEvents.filter(
+        (matchEvent) => matchEvent.matchId === selectedMatch.id,
+      )
+    : [];
 
   const closeDetails = useCallback(() => {
     setSelectedMatchId(undefined);
@@ -347,6 +353,7 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
           homeTeamSheet={selectedHomeTeamSheet}
           key={selectedMatch.id}
           match={selectedMatch}
+          matchEvents={selectedMatchEvents}
           onClose={closeDetails}
           players={snapshot.players}
           stageLabel={getStageLabel(selectedMatch, snapshot)}
@@ -364,6 +371,7 @@ function MatchDetailsPanel({
   homeTeam,
   homeTeamSheet,
   match,
+  matchEvents,
   onClose,
   players,
   stageLabel,
@@ -375,6 +383,7 @@ function MatchDetailsPanel({
   homeTeam: TeamType;
   homeTeamSheet: TournamentSnapshot["teamSheets"][number] | undefined;
   match: Match;
+  matchEvents: TournamentSnapshot["matchEvents"];
   onClose: () => void;
   players: TournamentSnapshot["players"];
   stageLabel: string;
@@ -385,6 +394,8 @@ function MatchDetailsPanel({
   const titleId = useId();
   const overviewTabId = useId();
   const overviewPanelId = useId();
+  const eventsTabId = useId();
+  const eventsPanelId = useId();
   const lineupsTabId = useId();
   const lineupsPanelId = useId();
   const [activeTab, setActiveTab] = useState<MatchDetailsTab>("overview");
@@ -478,6 +489,17 @@ function MatchDetailsPanel({
               Overview
             </button>
             <button
+              aria-controls={eventsPanelId}
+              aria-selected={activeTab === "events"}
+              className={`border-b-2 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${activeTab === "events" ? "border-highlight text-highlight" : "border-transparent text-secondary hover:text-foreground"}`}
+              id={eventsTabId}
+              onClick={() => setActiveTab("events")}
+              role="tab"
+              type="button"
+            >
+              Events
+            </button>
+            <button
               aria-controls={lineupsPanelId}
               aria-selected={activeTab === "lineups"}
               className={`border-b-2 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${activeTab === "lineups" ? "border-highlight text-highlight" : "border-transparent text-secondary hover:text-foreground"}`}
@@ -550,7 +572,25 @@ function MatchDetailsPanel({
             />
           </dl>
           </div>
-        ) : (
+        ) : null}
+
+        {activeTab === "events" ? (
+          <div
+            aria-labelledby={eventsTabId}
+            className="px-4 py-5 sm:px-7 sm:py-7"
+            id={eventsPanelId}
+            role="tabpanel"
+          >
+            <MatchEventTimeline
+              awayTeam={awayTeam}
+              events={matchEvents}
+              homeTeam={homeTeam}
+              players={players}
+            />
+          </div>
+        ) : null}
+
+        {activeTab === "lineups" ? (
           <div
             aria-labelledby={lineupsTabId}
             className="px-4 py-5 sm:px-7 sm:py-7"
@@ -565,7 +605,7 @@ function MatchDetailsPanel({
               players={players}
             />
           </div>
-        )}
+        ) : null}
       </section>
     </div>
   );
