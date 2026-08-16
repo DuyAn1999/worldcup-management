@@ -86,15 +86,18 @@ describe("MatchExplorer", () => {
   it("opens match details and restores focus when closed", async () => {
     const user = userEvent.setup();
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+    const explorer = screen.getByRole("region", { name: "Match explorer" });
 
     const openingMatchButton = screen.getByRole("button", {
       name: "View details for Match 1: Mexico versus South Africa",
     });
+    expect(explorer).toHaveClass("z-10");
     await user.click(openingMatchButton);
 
     const dialog = screen.getByRole("dialog", {
       name: "Match 1 details",
     });
+    expect(explorer).toHaveClass("z-20");
     expect(openingMatchButton).toHaveAttribute("aria-expanded", "true");
     expect(within(dialog).getByText("Mexico City Stadium")).toBeInTheDocument();
     expect(within(dialog).getByText("Mexico City, MX")).toBeInTheDocument();
@@ -107,6 +110,7 @@ describe("MatchExplorer", () => {
     await user.click(closeButton);
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(explorer).toHaveClass("z-10");
     expect(openingMatchButton).toHaveFocus();
     expect(openingMatchButton).toHaveAttribute("aria-expanded", "false");
   });
@@ -172,6 +176,25 @@ describe("MatchExplorer", () => {
         "90+3′: Enzo FERNANDEZ, Second yellow · Red card, Argentina",
       ),
     ).toBeInTheDocument();
+
+    await user.click(
+      within(dialog).getByRole("button", { name: "Cards, 6 events" }),
+    );
+    expect(within(dialog).getByText("6 of 7 events")).toBeInTheDocument();
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Round of 32" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 74: Germany versus Paraguay",
+      }),
+    );
+
+    dialog = screen.getByRole("dialog", { name: "Match 74 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Events" }));
+    expect(
+      within(dialog).getByRole("button", { name: "All, 6 events" }),
+    ).toHaveAttribute("aria-pressed", "true");
 
     await user.keyboard("{Escape}");
     await user.click(screen.getByRole("button", { name: "All matches" }));

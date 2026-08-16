@@ -11,6 +11,17 @@ import type {
 
 import { TeamFlag } from "./team-flag";
 
+type EventFilter = "all" | "goals" | "cards";
+
+const eventFilterOptions: readonly {
+  value: EventFilter;
+  label: string;
+}[] = [
+  { value: "all", label: "All" },
+  { value: "goals", label: "Goals" },
+  { value: "cards", label: "Cards" },
+];
+
 export function MatchEventTimeline({
   awayTeam,
   events,
@@ -26,9 +37,28 @@ export function MatchEventTimeline({
     () => [...events].sort((left, right) => left.sequence - right.sequence),
     [events],
   );
+  const [activeFilter, setActiveFilter] = useState<EventFilter>("all");
   const playersById = useMemo(
     () => new Map(players.map((player) => [player.id, player])),
     [players],
+  );
+  const eventCounts = useMemo(
+    () => ({
+      all: orderedEvents.length,
+      goals: orderedEvents.filter((event) => event.type === "goal").length,
+      cards: orderedEvents.filter((event) => event.type === "card").length,
+    }),
+    [orderedEvents],
+  );
+  const visibleEvents = useMemo(
+    () =>
+      orderedEvents.filter(
+        (event) =>
+          activeFilter === "all" ||
+          (activeFilter === "goals" && event.type === "goal") ||
+          (activeFilter === "cards" && event.type === "card"),
+      ),
+    [activeFilter, orderedEvents],
   );
 
   if (orderedEvents.length === 0) {
@@ -64,39 +94,83 @@ export function MatchEventTimeline({
             Goals and cards
           </h3>
         </div>
-        <p className="text-xs text-secondary">
-          {orderedEvents.length} {orderedEvents.length === 1 ? "event" : "events"}
+        <p aria-live="polite" className="text-xs text-secondary">
+          {formatVisibleEventCount(visibleEvents.length, orderedEvents.length)}
         </p>
       </div>
 
-      <ol
-        aria-label="Chronological match events"
-        className="relative mt-5 space-y-3 before:absolute before:bottom-6 before:left-1/2 before:top-6 before:w-px before:-translate-x-1/2 before:bg-gradient-to-b before:from-highlight before:via-line before:to-highlight/30"
+      <div
+        aria-label="Filter match events"
+        className="mt-4 grid grid-cols-3 gap-1.5 rounded-2xl border border-line bg-stadium/65 p-1.5"
+        role="group"
       >
-        {orderedEvents.map((event) => {
-          const isHomeEvent = event.teamId === homeTeam.id;
-          const team = isHomeEvent ? homeTeam : awayTeam;
-          const player = playersById.get(event.playerId);
+        {eventFilterOptions.map((option) => {
+          const isActive = activeFilter === option.value;
+          const count = eventCounts[option.value];
 
           return (
-            <li
-              className="relative grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]"
-              data-team-side={isHomeEvent ? "home" : "away"}
-              key={event.id}
+            <button
+              aria-label={`${option.label}, ${count} ${count === 1 ? "event" : "events"}`}
+              aria-pressed={isActive}
+              className={`flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-2.5 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight ${isActive ? "bg-highlight text-stadium shadow-lg shadow-black/20" : "text-secondary hover:bg-surface hover:text-foreground"}`}
+              key={option.value}
+              onClick={() => setActiveFilter(option.value)}
+              type="button"
             >
-              <div className={isHomeEvent ? "col-start-1" : "col-start-3"}>
-                <EventCard
-                  align={isHomeEvent ? "right" : "left"}
-                  event={event}
-                  player={player}
-                  team={team}
-                />
-              </div>
-              <EventMinute event={event} />
-            </li>
+              <span className="truncate">{option.label}</span>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[0.6rem] tabular-nums ${isActive ? "bg-stadium/15" : "bg-highlight/10 text-highlight"}`}
+              >
+                {count}
+              </span>
+            </button>
           );
         })}
-      </ol>
+      </div>
+
+      {visibleEvents.length > 0 ? (
+        <ol
+          aria-label="Chronological match events"
+          className="relative mt-5 space-y-3 before:absolute before:bottom-6 before:left-1/2 before:top-6 before:w-px before:-translate-x-1/2 before:bg-gradient-to-b before:from-highlight before:via-line before:to-highlight/30"
+        >
+          {visibleEvents.map((event) => {
+            const isHomeEvent = event.teamId === homeTeam.id;
+            const team = isHomeEvent ? homeTeam : awayTeam;
+            const player = playersById.get(event.playerId);
+
+            return (
+              <li
+                className="relative grid grid-cols-[minmax(0,1fr)_3rem_minmax(0,1fr)] items-center gap-2 sm:grid-cols-[minmax(0,1fr)_4rem_minmax(0,1fr)]"
+                data-team-side={isHomeEvent ? "home" : "away"}
+                key={event.id}
+              >
+                <div className={isHomeEvent ? "col-start-1" : "col-start-3"}>
+                  <EventCard
+                    align={isHomeEvent ? "right" : "left"}
+                    event={event}
+                    player={player}
+                    team={team}
+                  />
+                </div>
+                <EventMinute event={event} />
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <div
+          aria-live="polite"
+          className="mt-5 rounded-2xl border border-dashed border-line bg-stadium/40 px-5 py-10 text-center"
+          role="status"
+        >
+          <p className="font-semibold">
+            No {activeFilter === "goals" ? "goals" : "cards"} in this match
+          </p>
+          <p className="mt-2 text-sm leading-6 text-secondary">
+            Try another filter to explore the imported event record.
+          </p>
+        </div>
+      )}
 
       <p className="mt-5 text-center text-xs leading-5 text-secondary">
         Penalty-shootout kicks are summarized with the final score.
@@ -141,7 +215,8 @@ function EventCard({
   return (
     <article
       aria-label={`${formatEventMinute(event)}: ${playerName}, ${label}, ${team.name}`}
-      className={`flex min-w-0 items-center gap-2 rounded-2xl border border-line bg-surface px-2.5 py-3 shadow-lg shadow-black/10 sm:gap-3 sm:px-3 ${align === "right" ? "flex-row-reverse text-right" : "text-left"}`}
+      className={`flex min-w-0 items-center gap-2 rounded-2xl border border-line bg-surface px-2.5 py-3 shadow-lg shadow-black/10 transition hover:border-highlight/55 hover:bg-surface-raised focus-visible:border-highlight focus-visible:bg-surface-raised focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-highlight/45 sm:gap-3 sm:px-3 ${align === "right" ? "flex-row-reverse text-right" : "text-left"}`}
+      tabIndex={0}
     >
       <TimelinePlayerAvatar player={player} />
       <span className="min-w-0 flex-1">
@@ -248,6 +323,14 @@ function getEventLabel(event: MatchEvent) {
 
 function formatEventMinute(event: MatchEvent) {
   return `${event.minute}${event.stoppageMinute ? `+${event.stoppageMinute}` : ""}′`;
+}
+
+function formatVisibleEventCount(visibleCount: number, totalCount: number) {
+  if (visibleCount === totalCount) {
+    return `${totalCount} ${totalCount === 1 ? "event" : "events"}`;
+  }
+
+  return `${visibleCount} of ${totalCount} events`;
 }
 
 function getPlayerInitials(name: string | undefined) {

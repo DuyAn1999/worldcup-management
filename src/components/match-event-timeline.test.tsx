@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
 import type { MatchEvent, Player, Team } from "@/domain/tournament/types";
@@ -133,6 +134,77 @@ describe("MatchEventTimeline", () => {
     ).toBeInTheDocument();
     expect(screen.getByLabelText("94′, extra time")).toBeInTheDocument();
     expect(screen.getAllByText("ET")).toHaveLength(3);
+  });
+
+  it("filters events with counts and preserves keyboard access", async () => {
+    const user = userEvent.setup();
+    render(
+      <MatchEventTimeline
+        awayTeam={awayTeam}
+        events={events}
+        homeTeam={homeTeam}
+        players={players}
+      />,
+    );
+
+    const allFilter = screen.getByRole("button", { name: "All, 6 events" });
+    const goalsFilter = screen.getByRole("button", {
+      name: "Goals, 3 events",
+    });
+    const cardsFilter = screen.getByRole("button", {
+      name: "Cards, 3 events",
+    });
+    expect(allFilter).toHaveAttribute("aria-pressed", "true");
+
+    await user.tab();
+    expect(allFilter).toHaveFocus();
+    await user.tab();
+    expect(goalsFilter).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(goalsFilter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("3 of 6 events")).toBeInTheDocument();
+    expect(
+      screen.getAllByRole("listitem").map((item) => item.textContent),
+    ).toEqual([
+      expect.stringContaining("Ada STRIKER"),
+      expect.stringContaining("Penalty goal"),
+      expect.stringContaining("Own goal"),
+    ]);
+
+    await user.click(cardsFilter);
+    expect(cardsFilter).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getAllByRole("listitem")).toHaveLength(3);
+    expect(screen.queryByText("Penalty goal")).not.toBeInTheDocument();
+
+    const firstEventCard = screen.getByLabelText(
+      "45+2′: Bea DEFENDER, Yellow card, Away City",
+    );
+    expect(firstEventCard).toHaveAttribute("tabindex", "0");
+    firstEventCard.focus();
+    expect(firstEventCard).toHaveFocus();
+  });
+
+  it("shows a filter-specific empty state without implying missing data", async () => {
+    const user = userEvent.setup();
+    render(
+      <MatchEventTimeline
+        awayTeam={awayTeam}
+        events={[events[1]]}
+        homeTeam={homeTeam}
+        players={players}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Cards, 0 events" }));
+
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "No cards in this match",
+    );
+    expect(
+      screen.getByText("Try another filter to explore the imported event record."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Events not available")).not.toBeInTheDocument();
   });
 
   it("uses official portraits and falls back to player initials", () => {

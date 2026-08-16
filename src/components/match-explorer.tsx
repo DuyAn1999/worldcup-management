@@ -145,7 +145,7 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
   return (
     <section
       aria-labelledby="match-explorer-title"
-      className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-20 sm:px-8 sm:pb-28"
+      className={`relative mx-auto w-full max-w-7xl px-5 pb-20 sm:px-8 sm:pb-28 ${selectedMatch ? "z-20" : "z-10"}`}
     >
       <div className="rounded-[2rem] border border-line bg-surface/85 p-4 shadow-2xl shadow-black/20 backdrop-blur-xl sm:p-6">
         <div className="flex flex-wrap items-end justify-between gap-5 border-b border-line px-1 pb-6">
