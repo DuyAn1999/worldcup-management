@@ -193,6 +193,59 @@ describe("MatchExplorer", () => {
     ).toBeInTheDocument();
   });
 
+  it("explores semifinal and third-place team sheets", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Semi-finals" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 102: England versus Argentina",
+      }),
+    );
+
+    let dialog = screen.getByRole("dialog", { name: "Match 102 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+
+    expect(within(dialog).getByText(/Thomas Tuchel/)).toBeInTheDocument();
+    expect(
+      within(dialog).getByRole("button", { name: "England · 4-2-3-1" }),
+    ).toHaveAttribute("aria-pressed", "true");
+    const harryKane = within(dialog).getByRole("button", {
+      name: "Harry KANE, number 9, Forward",
+    });
+    expect(harryKane.querySelector("img")?.getAttribute("src")).toContain(
+      "KANE-Harry_369419",
+    );
+
+    const substituteSummary = within(dialog)
+      .getByText("Substitutes")
+      .closest("summary");
+    expect(substituteSummary?.querySelector("span:last-child")).toHaveTextContent(
+      "14",
+    );
+
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Third place" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "View details for Match 103: France versus England",
+      }),
+    );
+
+    dialog = screen.getByRole("dialog", { name: "Match 103 details" });
+    await user.click(within(dialog).getByRole("tab", { name: "Lineups" }));
+    await user.click(
+      within(dialog).getByRole("button", { name: "England · 4-1-2-3" }),
+    );
+
+    const bukayoSaka = within(dialog).getByRole("button", {
+      name: "Bukayo SAKA, number 7, Forward",
+    });
+    expect(bukayoSaka.querySelector("img")).toBeNull();
+    expect(within(bukayoSaka).getByText("BS")).toBeInTheDocument();
+  });
+
   it("falls back to player initials when an official portrait fails", async () => {
     const user = userEvent.setup();
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
