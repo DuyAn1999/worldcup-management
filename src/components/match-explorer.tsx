@@ -17,12 +17,15 @@ import type {
   Venue,
 } from "@/domain/tournament/types";
 
+import { GroupStandingsView } from "./group-standings";
+import { KnockoutBracketView } from "./knockout-bracket";
 import { MatchEventTimeline } from "./match-event-timeline";
 import { MatchTeamSheetView } from "./match-team-sheet";
 import { TeamFlag } from "./team-flag";
 
 type StageFilter = "all" | MatchStage;
 type MatchDetailsTab = "overview" | "events" | "lineups";
+type ExplorerView = "matches" | "standings" | "bracket";
 
 const stageOptions: readonly {
   value: StageFilter;
@@ -44,6 +47,7 @@ type MatchExplorerProps = Readonly<{
 }>;
 
 export function MatchExplorer({ snapshot }: MatchExplorerProps) {
+  const [activeView, setActiveView] = useState<ExplorerView>("matches");
   const [selectedStage, setSelectedStage] = useState<StageFilter>("all");
   const [selectedGroup, setSelectedGroup] = useState("all");
   const [selectedMatchId, setSelectedMatchId] = useState<string>();
@@ -142,6 +146,11 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
     }
   }
 
+  function selectView(view: ExplorerView) {
+    setActiveView(view);
+    if (view !== activeView) setSelectedMatchId(undefined);
+  }
+
   return (
     <section
       aria-labelledby="match-explorer-title"
@@ -161,67 +170,108 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
             </h2>
           </div>
 
-          <div className="min-w-48">
-            <label
-              className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-secondary"
-              htmlFor={groupFilterId}
+          <div className="flex flex-wrap items-end gap-3">
+            <div
+              aria-label="Explorer view"
+              className="flex rounded-xl border border-line bg-stadium p-1"
+              role="group"
             >
-              Group filter
-            </label>
-            <select
-              className="w-full rounded-xl border border-line bg-stadium px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-highlight focus:ring-2 focus:ring-highlight/20"
-              id={groupFilterId}
-              onChange={(event) => selectGroup(event.target.value)}
-              value={selectedGroup}
-            >
-              <option value="all">All groups</option>
-              {snapshot.groups.map((group) => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
+              {(["matches", "standings", "bracket"] as const).map((view) => (
+                <button
+                  aria-pressed={activeView === view}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold capitalize transition ${activeView === view ? "bg-highlight text-stadium" : "text-secondary hover:text-foreground"}`}
+                  key={view}
+                  onClick={() => selectView(view)}
+                  type="button"
+                >
+                  {view === "matches"
+                    ? "Matches"
+                    : view === "standings"
+                      ? "Standings"
+                      : "Bracket"}
+                </button>
               ))}
-            </select>
+            </div>
+
+            {activeView === "matches" ? (
+              <div className="min-w-48">
+                <label
+                  className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-secondary"
+                  htmlFor={groupFilterId}
+                >
+                  Group filter
+                </label>
+                <select
+                  className="w-full rounded-xl border border-line bg-stadium px-3 py-2.5 text-sm text-foreground outline-none transition focus:border-highlight focus:ring-2 focus:ring-highlight/20"
+                  id={groupFilterId}
+                  onChange={(event) => selectGroup(event.target.value)}
+                  value={selectedGroup}
+                >
+                  <option value="all">All groups</option>
+                  {snapshot.groups.map((group) => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
           </div>
         </div>
 
-        <ol
-          aria-label="Tournament stage filter"
-          className="journey-track mt-6 grid grid-cols-4 gap-x-2 gap-y-5 lg:grid-cols-8"
-        >
-          {stageOptions.map((option, index) => {
-            const isSelected = selectedStage === option.value;
-            const matchCount = stageCounts.get(option.value) ?? 0;
+        {activeView === "matches" ? (
+          <ol
+            aria-label="Tournament stage filter"
+            className="journey-track mt-6 grid grid-cols-4 gap-x-2 gap-y-5 lg:grid-cols-8"
+          >
+            {stageOptions.map((option, index) => {
+              const isSelected = selectedStage === option.value;
+              const matchCount = stageCounts.get(option.value) ?? 0;
 
-            return (
-              <li className="relative z-10" key={option.value}>
-                <button
-                  aria-label={option.label}
-                  aria-pressed={isSelected}
-                  className="group flex w-full flex-col items-center gap-2 text-center"
-                  onClick={() => selectStage(option.value)}
-                  type="button"
-                >
-                  <span
-                    className={`journey-marker ${isSelected ? "journey-marker-active" : ""}`}
+              return (
+                <li className="relative z-10" key={option.value}>
+                  <button
+                    aria-label={option.label}
+                    aria-pressed={isSelected}
+                    className="group flex w-full flex-col items-center gap-2 text-center"
+                    onClick={() => selectStage(option.value)}
+                    type="button"
                   >
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <span
-                    className={`text-xs font-semibold transition sm:text-sm ${isSelected ? "text-foreground" : "text-secondary group-hover:text-foreground"}`}
-                  >
-                    <span className="hidden sm:inline">{option.label}</span>
-                    <span className="sm:hidden">{option.shortLabel}</span>
-                  </span>
-                  <span aria-hidden="true" className="text-xs text-secondary/70">
-                    {matchCount}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-        </ol>
+                    <span
+                      className={`journey-marker ${isSelected ? "journey-marker-active" : ""}`}
+                    >
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <span
+                      className={`text-xs font-semibold transition sm:text-sm ${isSelected ? "text-foreground" : "text-secondary group-hover:text-foreground"}`}
+                    >
+                      <span className="hidden sm:inline">{option.label}</span>
+                      <span className="sm:hidden">{option.shortLabel}</span>
+                    </span>
+                    <span aria-hidden="true" className="text-xs text-secondary/70">
+                      {matchCount}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+        ) : null}
       </div>
 
+      {activeView === "standings" ? (
+        <GroupStandingsView snapshot={snapshot} />
+      ) : activeView === "bracket" ? (
+        <KnockoutBracketView
+          onSelectMatch={(matchId, trigger) => {
+            returnFocusRef.current = trigger;
+            setSelectedMatchId(matchId);
+          }}
+          selectedMatchId={selectedMatchId}
+          snapshot={snapshot}
+        />
+      ) : (
+        <>
       <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
         <p aria-live="polite" className="font-medium">
           {filteredMatches.length} {filteredMatches.length === 1 ? "match" : "matches"}{" "}
@@ -342,6 +392,8 @@ export function MatchExplorer({ snapshot }: MatchExplorerProps) {
         <div className="mt-5 rounded-2xl border border-dashed border-line px-6 py-14 text-center text-secondary">
           No matches are available for this route.
         </div>
+      )}
+        </>
       )}
 
       {selectedMatch && selectedHomeTeam && selectedAwayTeam ? (

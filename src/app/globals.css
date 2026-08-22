@@ -69,6 +69,25 @@ body {
   position: relative;
 }
 
+.group-route {
+  position: relative;
+}
+
+.group-route::before {
+  position: absolute;
+  top: 1.2rem;
+  right: 3%;
+  left: 3%;
+  height: 1px;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in oklch, var(--highlight) 35%, var(--line)) 5% 95%,
+    transparent
+  );
+}
+
 .journey-track::before {
   position: absolute;
   top: 1.2rem;
@@ -148,6 +167,94 @@ button:hover .journey-marker {
     0 24px 55px color-mix(in oklch, black 25%, transparent);
 }
 
+.knockout-scroll {
+  scrollbar-color: color-mix(in oklch, var(--highlight) 55%, var(--line))
+    var(--stadium);
+  scrollbar-width: thin;
+}
+
+.knockout-round-headings,
+.knockout-bracket-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 17rem);
+  column-gap: 3rem;
+  min-width: 97rem;
+}
+
+.knockout-bracket-grid {
+  grid-template-rows: repeat(32, 3.75rem);
+}
+
+.knockout-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.knockout-slot-incoming::before {
+  position: absolute;
+  top: 25%;
+  bottom: 25%;
+  left: -1.5rem;
+  border-left: 1px solid var(--line);
+  content: "";
+}
+
+.knockout-slot-incoming::after {
+  position: absolute;
+  top: 50%;
+  left: -1.5rem;
+  width: 1.5rem;
+  border-top: 1px solid var(--line);
+  content: "";
+}
+
+.knockout-match-card {
+  position: relative;
+  z-index: 2;
+}
+
+.knockout-match-card-output::after {
+  position: absolute;
+  top: 50%;
+  right: -1.5rem;
+  width: 1.5rem;
+  border-top: 1px solid var(--line);
+  content: "";
+}
+
+.knockout-match-card-output-path::after {
+  border-color: var(--highlight);
+  border-width: 2px;
+  box-shadow: 0 0 10px color-mix(in oklch, var(--highlight) 38%, transparent);
+}
+
+.knockout-connector-highlight {
+  position: absolute;
+  left: -1.5rem;
+  z-index: 3;
+  width: 1.5rem;
+  height: 25%;
+  pointer-events: none;
+  border-color: var(--highlight);
+  filter: drop-shadow(
+    0 0 4px color-mix(in oklch, var(--highlight) 48%, transparent)
+  );
+}
+
+.knockout-connector-top {
+  top: 25%;
+  border-bottom-width: 2px;
+  border-left-width: 2px;
+}
+
+.knockout-connector-bottom {
+  top: 50%;
+  border-top-width: 2px;
+  border-left-width: 2px;
+}
+
 .match-details-backdrop {
   animation: match-details-backdrop-in 180ms ease-out;
 }
@@ -225,7 +332,8 @@ button:hover .journey-marker {
 }
 
 @media (max-width: 1023px) {
-  .journey-track::before {
+  .journey-track::before,
+  .group-route::before {
     display: none;
   }
 }
@@ -242,6 +350,7 @@ button:hover .journey-marker {
 @media (prefers-reduced-motion: reduce) {
   .journey-marker,
   .match-card,
+  .knockout-match-card button,
   .match-details-backdrop,
   .match-details-panel,
   .formation-pitch button span {

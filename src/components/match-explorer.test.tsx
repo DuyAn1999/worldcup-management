@@ -9,6 +9,37 @@ import { MatchExplorer } from "./match-explorer";
 afterEach(cleanup);
 
 describe("MatchExplorer", () => {
+  it("switches between matches and the standings map", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    expect(screen.getByRole("list", { name: "Match results" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Matches" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Standings" }));
+
+    expect(
+      screen.getByRole("heading", { name: "Twelve routes into the knockouts" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("table", { name: "Group A standings" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Match results" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Tournament stage filter" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Matches" }));
+
+    expect(screen.getByText("104 matches shown")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: "Match results" })).toBeInTheDocument();
+  });
+
   it("highlights a regular-time winner but leaves a draw neutral", () => {
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
 
