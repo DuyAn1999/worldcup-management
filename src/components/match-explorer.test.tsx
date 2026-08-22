@@ -40,6 +40,37 @@ describe("MatchExplorer", () => {
     expect(screen.getByRole("list", { name: "Match results" })).toBeInTheDocument();
   });
 
+  it("opens knockout matches from the connected bracket", async () => {
+    const user = userEvent.setup();
+    render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
+
+    await user.click(screen.getByRole("button", { name: "Bracket" }));
+
+    expect(
+      screen.getByRole("heading", {
+        name: "Every turn on the road to the trophy",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("list", { name: "Knockout bracket matches" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("list", { name: "Match results" }),
+    ).not.toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "View bracket details for Match 104: Spain versus Argentina",
+      }),
+    );
+
+    expect(
+      screen.getByRole("dialog", { name: "Match 104 details" }),
+    ).toBeInTheDocument();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("highlights a regular-time winner but leaves a draw neutral", () => {
     render(<MatchExplorer snapshot={fifaWorldCup2026Snapshot} />);
 
